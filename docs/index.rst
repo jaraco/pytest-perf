@@ -7,7 +7,7 @@ Welcome to |project| documentation!
    history
 
 
-.. automodule:: skeleton
+.. automodule:: pytest_perf
     :members:
     :undoc-members:
     :show-inheritance:
