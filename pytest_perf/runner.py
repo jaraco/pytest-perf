@@ -51,7 +51,7 @@ class BenchmarkRunner:
 def upstream_url():
     """
     >>> upstream_url()
-    'git+https://github.com/jaraco/pytest-perf.git'
+    'git+https://github.com/jaraco/pytest-perf'
     """
     cmd = ['git', 'remote', 'get-url', 'origin']
     origin = subprocess.check_output(cmd, **_text).strip()
