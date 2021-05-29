@@ -1,13 +1,13 @@
-.. image:: https://img.shields.io/pypi/v/skeleton.svg
+.. image:: https://img.shields.io/pypi/v/pytest-perf.svg
    :target: `PyPI link`_
 
-.. image:: https://img.shields.io/pypi/pyversions/skeleton.svg
+.. image:: https://img.shields.io/pypi/pyversions/pytest-perf.svg
    :target: `PyPI link`_
 
-.. _PyPI link: https://pypi.org/project/skeleton
+.. _PyPI link: https://pypi.org/project/pytest-perf
 
-.. image:: https://github.com/jaraco/skeleton/workflows/tests/badge.svg
-   :target: https://github.com/jaraco/skeleton/actions?query=workflow%3A%22tests%22
+.. image:: https://github.com/jaraco/pytest-perf/workflows/tests/badge.svg
+   :target: https://github.com/jaraco/pytest-perf/actions?query=workflow%3A%22tests%22
    :alt: tests
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
