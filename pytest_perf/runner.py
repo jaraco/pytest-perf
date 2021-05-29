@@ -6,6 +6,9 @@ import contextlib
 import pip_run
 
 
+_text = dict(text=True) if sys.version_info > (3, 7) else dict(universal_newlines=True)
+
+
 class Command(list):
     def __init__(self, exercise='pass', warmup='pass'):
         self[:] = [
@@ -40,7 +43,7 @@ class BenchmarkRunner:
         return benchmark, local
 
     def eval(self, cmd, **kwargs):
-        out = subprocess.check_output(cmd, text=True, **kwargs)
+        out = subprocess.check_output(cmd, **_text, **kwargs)
         val = re.search(r'([0-9.]+ \w+) per loop', out).group(1)
         return val
 
@@ -51,5 +54,5 @@ def upstream_url():
     'git+https://github.com/jaraco/pytest-perf.git'
     """
     cmd = ['git', 'remote', 'get-url', 'origin']
-    origin = subprocess.check_output(cmd, text=True).strip()
+    origin = subprocess.check_output(cmd, **_text).strip()
     return f'git+{origin}'
