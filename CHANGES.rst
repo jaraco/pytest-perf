@@ -1,3 +1,9 @@
+v0.3.0
+======
+
+Now reports include an indication of how much variance was observed
+between the control and experiment.
+
 v0.2.0
 ======
 
