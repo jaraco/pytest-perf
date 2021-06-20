@@ -22,11 +22,23 @@ class Command(list):
         ]
 
 
+class Result:
+    def __init__(self, baseline, local):
+        self.baseline_text = baseline
+        self.local_text = local
+
+    def delta(self):
+        return self.local - self.baseline
+
+    def __repr__(self):
+        return f'Result({self.baseline_text!r}, {self.local_text!r})'
+
+
 class BenchmarkRunner:
     """
     >>> br = BenchmarkRunner()
     >>> br.run(Command('import time; time.sleep(0.01)'))
-    ('...', '...')
+    Result('...', '...')
     """
 
     def __init__(self):
@@ -40,7 +52,7 @@ class BenchmarkRunner:
     def run(self, cmd: Command):
         local = self.eval(cmd)
         benchmark = self.eval(cmd, env=self.baseline_env)
-        return benchmark, local
+        return Result(benchmark, local)
 
     def eval(self, cmd, **kwargs):
         out = subprocess.check_output(cmd, **_text, **kwargs)
