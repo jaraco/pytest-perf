@@ -1,3 +1,8 @@
+v0.4.0
+======
+
+Now ``extras`` can be specified for each experiment.
+
 v0.3.0
 ======
 

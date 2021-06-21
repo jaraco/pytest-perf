@@ -1,14 +1,11 @@
 import pytest
 import configparser
+import functools
 
 from typing import List
 from jaraco.functools import assign_params
 
 from pytest_perf import runner
-
-
-def pytest_configure(config):
-    Item.runner = runner.BenchmarkRunner()
 
 
 def pytest_collect_file(parent, path):
@@ -33,16 +30,24 @@ class File(pytest.File):
         )
 
 
+runner_factory = functools.lru_cache(runner.BenchmarkRunner)
+
+
 class Item(pytest.Item):
     _instances: 'List[Item]' = []
 
     def __init__(self, name, parent, spec):
         super().__init__(name, parent)
+        self.spec = spec
         self.command = assign_params(runner.Command, spec)()
         Item._instances.append(self)
 
     def runtest(self):
         self.results = self.runner.run(self.command)
+
+    @property
+    def runner(self):
+        return assign_params(runner_factory, self.spec)()
 
     def reportinfo(self):
         return self.fspath, 0, self.name

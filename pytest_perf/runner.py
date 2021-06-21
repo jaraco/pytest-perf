@@ -69,12 +69,15 @@ class BenchmarkRunner:
     Result('...', '...')
     """
 
-    def __init__(self):
+    def __init__(self, extras=None):
+        self.extras_spec = f'[{extras}]' if extras else ''
         self.baseline_env = self._setup_env()
 
     def _setup_env(self):
         self.stack = contextlib.ExitStack()
-        target = self.stack.enter_context(pip_run.deps.load(upstream_url()))
+        target = self.stack.enter_context(
+            pip_run.deps.load(upstream_url(self.extras_spec))
+        )
         return pip_run.launch._setup_env(target)
 
     def run(self, cmd: Command):
@@ -88,11 +91,12 @@ class BenchmarkRunner:
         return val
 
 
-def upstream_url():
+def upstream_url(extras=''):
     """
     >>> upstream_url()
-    'git+https://github.com/jaraco/pytest-perf'
+    'pytest-perf@git+https://github.com/jaraco/pytest-perf'
     """
     cmd = ['git', 'remote', 'get-url', 'origin']
     origin = subprocess.check_output(cmd, **_text).strip()
-    return f'git+{origin}'
+    base, sep, name = origin.rpartition('/')
+    return f'{name}{extras}@git+{origin}'
