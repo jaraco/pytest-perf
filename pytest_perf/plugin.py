@@ -2,6 +2,7 @@ import pytest
 import configparser
 
 from typing import List
+from jaraco.functools import assign_params
 
 from pytest_perf import runner
 
@@ -37,7 +38,7 @@ class Item(pytest.Item):
 
     def __init__(self, name, parent, spec):
         super().__init__(name, parent)
-        self.command = runner.Command(**spec)
+        self.command = assign_params(runner.Command, spec)()
         Item._instances.append(self)
 
     def runtest(self):
