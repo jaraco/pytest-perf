@@ -30,7 +30,7 @@ class File(pytest.File):
         )
 
 
-runner_factory = functools.lru_cache(runner.BenchmarkRunner)
+runner_factory = functools.lru_cache()(runner.BenchmarkRunner)
 
 
 class Item(pytest.Item):
