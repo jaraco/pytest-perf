@@ -2,6 +2,7 @@ import sys
 import re
 import subprocess
 import contextlib
+import pathlib
 
 import pip_run
 import tempora
@@ -93,10 +94,9 @@ class BenchmarkRunner:
 
 def upstream_url(extras=''):
     """
+    This URL doesn't work because of pypa/pip@10098
     >>> upstream_url()
-    'pytest-perf@git+https://github.com/jaraco/pytest-perf'
+    'pytest-perf@git+file://...pytest-perf@main'
     """
-    cmd = ['git', 'remote', 'get-url', 'origin']
-    origin = subprocess.check_output(cmd, **_text).strip()
-    base, sep, name = origin.rpartition('/')
-    return f'{name}{extras}@git+{origin}'
+    here = pathlib.Path.cwd()
+    return f'{here.stem}{extras}@git+file://{here}@main'
