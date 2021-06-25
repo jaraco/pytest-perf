@@ -1,3 +1,10 @@
+v0.5.1
+======
+
+Fixed bug where ``shutil.rmtree`` would fail during pip-run
+teardowns when BenchmarkRunners would linger until interpreter
+teardown.
+
 v0.5.0
 ======
 

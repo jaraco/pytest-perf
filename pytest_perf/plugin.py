@@ -20,6 +20,13 @@ def pytest_terminal_summary(terminalreporter, config):
         terminalreporter.write(str(item) + '\n')
 
 
+def pytest_sessionfinish():
+    """
+    Clear the runner factory to tear down any BenchmarkRunners.
+    """
+    runner_factory.cache_clear()
+
+
 class File(pytest.File):
     def collect(self):
         config = configparser.ConfigParser()
