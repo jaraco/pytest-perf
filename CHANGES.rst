@@ -1,3 +1,10 @@
+v0.5.0
+======
+
+Runner now creates a separate environment for the local package,
+avoiding relying on the environment under test, thus providing a
+better comparison.
+
 v0.4.0
 ======
 

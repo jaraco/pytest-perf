@@ -14,6 +14,7 @@ class Command(list):
     def __init__(self, exercise='pass', warmup='pass'):
         self[:] = [
             sys.executable,
+            '-s',
             '-m',
             'timeit',
             '--setup',
@@ -70,18 +71,17 @@ class BenchmarkRunner:
     """
 
     def __init__(self, extras=None):
-        self.extras_spec = f'[{extras}]' if extras else ''
-        self.baseline_env = self._setup_env()
+        spec = f'[{extras}]' if extras else ''
+        self.baseline_env = self._setup_env(upstream_url(spec))
+        self.local_env = self._setup_env(f'.{spec}')
 
-    def _setup_env(self):
+    def _setup_env(self, deps):
         self.stack = contextlib.ExitStack()
-        target = self.stack.enter_context(
-            pip_run.deps.load(upstream_url(self.extras_spec))
-        )
+        target = self.stack.enter_context(pip_run.deps.load(deps))
         return pip_run.launch._setup_env(target)
 
     def run(self, cmd: Command):
-        local = self.eval(cmd)
+        local = self.eval(cmd, env=self.local_env)
         benchmark = self.eval(cmd, env=self.baseline_env)
         return Result(benchmark, local)
 
