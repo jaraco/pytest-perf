@@ -38,7 +38,10 @@ class Result:
 
     @property
     def variance(self):
-        return self.delta / self.control
+        try:
+            return self.delta / self.control
+        except ZeroDivisionError:
+            return float('inf') if self.delta else 0
 
     @property
     def significant(self):
