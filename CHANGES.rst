@@ -1,3 +1,8 @@
+v0.6.0
+======
+
+Renamed plugin to simply 'perf' to match convention.
+
 v0.5.1
 ======
 
