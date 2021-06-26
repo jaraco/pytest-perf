@@ -72,11 +72,11 @@ class BenchmarkRunner:
 
     def __init__(self, extras=None):
         spec = f'[{extras}]' if extras else ''
+        self.stack = contextlib.ExitStack()
         self.baseline_env = self._setup_env(upstream_url(spec))
         self.local_env = self._setup_env(f'.{spec}')
 
     def _setup_env(self, deps):
-        self.stack = contextlib.ExitStack()
         target = self.stack.enter_context(pip_run.deps.load(deps))
         return pip_run.launch._setup_env(target)
 

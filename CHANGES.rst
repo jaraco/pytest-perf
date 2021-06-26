@@ -1,3 +1,9 @@
+v0.6.2
+======
+
+Fix bug where stack was overwritten, exiting the baseline_env
+early.
+
 v0.6.1
 ======
 
