@@ -15,7 +15,7 @@ from pytest_perf import runner
 
 
 def pytest_collect_file(parent, path):
-    if path.basename.endswith('.py'):
+    if path.basename.endswith('.py') and 'pytest_perf' in path.read_text(encoding='utf-8'):
         return File.from_parent(parent, fspath=path)
 
 

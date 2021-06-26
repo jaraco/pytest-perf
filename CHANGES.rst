@@ -2,7 +2,8 @@ v0.9.2
 ======
 
 Rely on lower level ``importlib.util`` functions to reduce
-the effect of loading a module.
+the effect of loading a module. Require that modules
+contain 'pytest_perf' in them to be loaded.
 
 v0.9.1
 ======
