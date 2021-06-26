@@ -48,9 +48,7 @@ def funcs_from_name(name):
     mod_name = mod_path.replace('/', '.')
     mod = importlib.import_module(mod_name)
     return (
-        getattr(mod, name)
-        for name in dir(mod)
-        if re.search(r'(\b|_)perf(\b|_)', name)
+        getattr(mod, name) for name in dir(mod) if re.search(r'(\b|_)perf(\b|_)', name)
     )
 
 
