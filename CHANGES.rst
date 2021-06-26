@@ -1,3 +1,8 @@
+v0.9.1
+======
+
+Suppress exceptions when modules cannot be imported.
+
 v0.9.0
 ======
 

@@ -46,7 +46,11 @@ runner_factory = functools.lru_cache()(runner.BenchmarkRunner)
 def funcs_from_name(name):
     mod_path, sep, rest = name.rpartition('.')
     mod_name = mod_path.replace('/', '.')
-    mod = importlib.import_module(mod_name)
+    try:
+        mod = importlib.import_module(mod_name)
+    except ImportError:
+        # for now, suppress exceptions when a module can't be imported
+        mod = None
     return (
         getattr(mod, name) for name in dir(mod) if re.search(r'(\b|_)perf(\b|_)', name)
     )
