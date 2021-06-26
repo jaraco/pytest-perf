@@ -1,3 +1,9 @@
+v0.9.2
+======
+
+Rely on lower level ``importlib.util`` functions to reduce
+the effect of loading a module.
+
 v0.9.1
 ======
 

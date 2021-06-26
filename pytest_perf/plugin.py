@@ -8,6 +8,7 @@ import contextlib
 
 from typing import List
 from jaraco.functools import assign_params, pass_none, apply
+from jaraco.context import suppress
 from more_itertools import peekable
 
 from pytest_perf import runner
@@ -43,14 +44,18 @@ class File(pytest.File):
 runner_factory = functools.lru_cache()(runner.BenchmarkRunner)
 
 
+@suppress(Exception)
+def load_module(name):
+    spec = importlib.util.find_spec(name)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def funcs_from_name(name):
     mod_path, sep, rest = name.rpartition('.')
     mod_name = mod_path.replace('/', '.')
-    try:
-        mod = importlib.import_module(mod_name)
-    except ImportError:
-        # for now, suppress exceptions when a module can't be imported
-        mod = None
+    mod = load_module(mod_name)
     return (
         getattr(mod, name) for name in dir(mod) if re.search(r'(\b|_)perf(\b|_)', name)
     )
