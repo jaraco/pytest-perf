@@ -1,3 +1,9 @@
+v0.6.1
+======
+
+Bump to pip-run 8.5 to avoid pkg_resources mucking with
+the sys.path.
+
 v0.6.0
 ======
 
