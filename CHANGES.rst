@@ -1,3 +1,10 @@
+v0.9.0
+======
+
+#1: Instead of an ini file, this plugin now discovers the
+tests from any function with "perf" in the function name.
+See "exercises.py" in this repo for a demo of the syntax.
+
 v0.8.0
 ======
 
