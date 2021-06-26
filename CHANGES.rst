@@ -1,3 +1,8 @@
+v0.7.0
+======
+
+Improved error handling and report formatting.
+
 v0.6.2
 ======
 

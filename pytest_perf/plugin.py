@@ -4,6 +4,7 @@ import functools
 
 from typing import List
 from jaraco.functools import assign_params
+from more_itertools import peekable
 
 from pytest_perf import runner
 
@@ -14,10 +15,10 @@ def pytest_collect_file(parent, path):
 
 
 def pytest_terminal_summary(terminalreporter, config):
-    terminalreporter.write('\n')
-    terminalreporter.write('Perf results:\n')
-    for item in Item._instances:
-        terminalreporter.write(str(item) + '\n')
+    items = peekable(filter(None, Item._instances))
+    items and terminalreporter.section('perf')
+    for line in map(str, items):
+        terminalreporter.write_line(line)
 
 
 def pytest_sessionfinish():
@@ -61,3 +62,6 @@ class Item(pytest.Item):
 
     def __str__(self):
         return f'{self.name}: {self.results}'
+
+    def __bool__(self):
+        return hasattr(self, 'results')
