@@ -73,12 +73,11 @@ class BenchmarkRunner:
     Result('...', '...')
     """
 
-    def __init__(self, extras=None, deps=None):
-        spec = f'[{extras}]' if extras else ''
-        addl = filter(None, deps.splitlines()) if deps else []
+    def __init__(self, extras=(), deps=()):
+        spec = f'[{",".join(extras)}]' if extras else ''
         self.stack = contextlib.ExitStack()
-        self.baseline_env = self._setup_env(upstream_url(spec), *addl)
-        self.local_env = self._setup_env(f'.{spec}', *addl)
+        self.baseline_env = self._setup_env(upstream_url(spec), *deps)
+        self.local_env = self._setup_env(f'.{spec}', *deps)
 
     def _setup_env(self, *deps):
         target = self.stack.enter_context(pip_run.deps.load(*deps))
