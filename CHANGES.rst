@@ -1,3 +1,8 @@
+v0.8.0
+======
+
+Add support for 'deps'.
+
 v0.7.0
 ======
 
