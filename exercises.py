@@ -28,5 +28,5 @@ def diff_from_oh_nine_two_perf():
 def check_perf_isolated():
     import pytest_perf  # end warmup
 
-    path = pytest_perf.__path__[0]
+    path = str(pytest_perf.__path__)
     assert 'pip-run' in path, path
