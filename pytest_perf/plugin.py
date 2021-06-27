@@ -63,6 +63,7 @@ def funcs_from_name(name):
     )
 
 
+@pass_none
 def first_line(text):
     lines = (line.strip() for line in text.splitlines())
     return next(lines, None)
