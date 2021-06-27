@@ -23,3 +23,10 @@ def simple_perf_test():
 @control('v0.9.2')
 def diff_from_oh_nine_two_perf():
     pass
+
+
+def check_perf_isolated():
+    import pytest_perf  # end warmup
+
+    path = str(pytest_perf.__path__)
+    assert 'pip-run' in path, path

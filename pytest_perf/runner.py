@@ -2,6 +2,7 @@ import sys
 import re
 import subprocess
 import contextlib
+import tempfile
 
 import pip_run
 import tempora
@@ -89,7 +90,8 @@ class BenchmarkRunner:
         return Result(control, experiment)
 
     def eval(self, cmd, **kwargs):
-        out = subprocess.check_output(cmd, **_text, **kwargs)
+        with tempfile.TemporaryDirectory() as empty:
+            out = subprocess.check_output(cmd, cwd=empty, **_text, **kwargs)
         val = re.search(r'([0-9.]+ \w+) per loop', out).group(1)
         return val
 

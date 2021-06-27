@@ -1,3 +1,8 @@
+v0.10.1
+=======
+
+#2: Fixed isolation issue with exercise runner.
+
 v0.10.0
 =======
 
