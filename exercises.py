@@ -1,4 +1,4 @@
-from pytest_perf.deco import extras, deps
+from pytest_perf.deco import extras, deps, control
 
 
 @extras('testing')
@@ -18,3 +18,8 @@ def simple_perf_test():
 
     dir(abc)
     assert isinstance(abc, types.ModuleType)
+
+
+@control('v0.9.2')
+def diff_from_oh_nine_two():
+    pass

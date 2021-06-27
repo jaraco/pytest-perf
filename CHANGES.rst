@@ -1,3 +1,8 @@
+v0.10.0
+=======
+
+Add 'control' directive to override the control revision.
+
 v0.9.2
 ======
 

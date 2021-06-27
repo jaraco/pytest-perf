@@ -16,3 +16,11 @@ def decorate(name, *items):
 
 extras = functools.partial(decorate, 'extras')
 deps = functools.partial(decorate, 'deps')
+
+
+def control(rev):
+    def apply(func):
+        func.control = rev
+        return func
+
+    return apply

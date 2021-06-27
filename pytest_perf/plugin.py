@@ -15,7 +15,9 @@ from pytest_perf import runner
 
 
 def pytest_collect_file(parent, path):
-    if path.basename.endswith('.py') and 'pytest_perf' in path.read_text(encoding='utf-8'):
+    if path.basename.endswith('.py') and 'pytest_perf' in path.read_text(
+        encoding='utf-8'
+    ):
         return File.from_parent(parent, fspath=path)
 
 
@@ -76,6 +78,8 @@ def spec_from_func(_func):
         yield 'extras', freeze(_func.extras)
     with contextlib.suppress(AttributeError):
         yield 'deps', freeze(_func.deps)
+    with contextlib.suppress(AttributeError):
+        yield 'control', _func.control
     _header, _sep, _body_ind = inspect.getsource(_func).partition(':\n')
     _body = textwrap.dedent(_body_ind)
     warmup, sep, exercise = _body.rpartition('# end warmup')

@@ -73,10 +73,10 @@ class BenchmarkRunner:
     Result('...', '...')
     """
 
-    def __init__(self, extras=(), deps=()):
+    def __init__(self, extras=(), deps=(), control=None):
         spec = f'[{",".join(extras)}]' if extras else ''
         self.stack = contextlib.ExitStack()
-        self.baseline_env = self._setup_env(upstream_url(spec), *deps)
+        self.baseline_env = self._setup_env(upstream_url(spec, control), *deps)
         self.local_env = self._setup_env(f'.{spec}', *deps)
 
     def _setup_env(self, *deps):
@@ -94,7 +94,7 @@ class BenchmarkRunner:
         return val
 
 
-def upstream_url(extras=''):
+def upstream_url(extras='', control=None):
     """
     >>> upstream_url()
     'pytest-perf@git+https://github.com/jaraco/pytest-perf'
@@ -102,4 +102,5 @@ def upstream_url(extras=''):
     cmd = ['git', 'remote', 'get-url', 'origin']
     origin = subprocess.check_output(cmd, **_text).strip()
     base, sep, name = origin.rpartition('/')
-    return f'{name}{extras}@git+{origin}'
+    rev = f'@{control}' if control else ''
+    return f'{name}{extras}@git+{origin}{rev}'
