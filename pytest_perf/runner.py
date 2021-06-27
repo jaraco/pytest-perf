@@ -76,17 +76,17 @@ class BenchmarkRunner:
     def __init__(self, extras=(), deps=(), control=None):
         spec = f'[{",".join(extras)}]' if extras else ''
         self.stack = contextlib.ExitStack()
-        self.baseline_env = self._setup_env(upstream_url(spec, control), *deps)
-        self.local_env = self._setup_env(f'.{spec}', *deps)
+        self.control_env = self._setup_env(upstream_url(spec, control), *deps)
+        self.experiment_env = self._setup_env(f'.{spec}', *deps)
 
     def _setup_env(self, *deps):
         target = self.stack.enter_context(pip_run.deps.load(*deps))
         return pip_run.launch._setup_env(target)
 
     def run(self, cmd: Command):
-        local = self.eval(cmd, env=self.local_env)
-        benchmark = self.eval(cmd, env=self.baseline_env)
-        return Result(benchmark, local)
+        experiment = self.eval(cmd, env=self.experiment_env)
+        control = self.eval(cmd, env=self.control_env)
+        return Result(control, experiment)
 
     def eval(self, cmd, **kwargs):
         out = subprocess.check_output(cmd, **_text, **kwargs)
