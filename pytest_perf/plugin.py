@@ -91,6 +91,7 @@ def spec_from_func(_func):
 
 class Experiment(pytest.Item):
     _instances: 'List[Experiment]' = []
+    results = None
 
     def __init__(self, name, parent, spec):
         super().__init__(name, parent)
