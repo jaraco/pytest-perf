@@ -4,10 +4,10 @@ import re
 import subprocess
 import contextlib
 import tempfile
+from typing import ContextManager, Iterable, Iterator, List, Optional
 
 import pip_run
 import tempora
-
 
 _text = dict(text=True) if sys.version_info > (3, 7) else dict(universal_newlines=True)
 
@@ -75,46 +75,85 @@ class BenchmarkRunner:
     Result('...', '...')
     """
 
-    def __init__(self, extras=(), deps=(), control=None):
-        spec = f'[{",".join(extras)}]' if extras else ''
+    def __init__(
+        self,
+        extras: Iterable[str] = (),
+        deps: Iterable[str] = (),
+        control: Optional[str] = None,
+        target: str = '.',
+        baseline: Optional[str] = None,
+    ):
+        self.spec = f'[{",".join(extras)}]' if extras else ''
         self.stack = contextlib.ExitStack()
-        self.control_env = self._setup_env(upstream_url(spec, control), *deps)
-        target = os.environ.get("PYTEST_PERF_WHEEL_TARGET")
-        if target:
-            if spec:
-                # Assuming wheel name is normalised we can derive the package name:
-                name, _, _ = os.path.basename(target).partition("-")
-                # Normalise file URL for both Windows and POSIX:
-                file_url = f"file:///{os.path.abspath(target).replace(os.sep, '/')}"
-                file_url = file_url.replace("file:////", "file:///")
-                target = f"{name}{spec} @ {file_url}"
-        else:
-            target = f".{spec}"
-        self.experiment_env = self._setup_env(target, *deps)
+        self.control_env = self._setup_env(upstream_package(baseline, control), *deps)
+        self.experiment_env = self._setup_env(local_package(target), *deps)
 
-    def _setup_env(self, *deps):
-        target = self.stack.enter_context(pip_run.deps.load(*deps))
+    def _setup_env(self, install_context: ContextManager[str], *deps: str):
+        with install_context as package:
+            # Close the install context as soon as the package is installed
+            # to avoid baseline <=> target interference.
+            install_item = f"{package}{self.spec}"
+            target = self.stack.enter_context(pip_run.deps.load(install_item, *deps))
         return pip_run.launch._setup_env(target)
 
-    def run(self, cmd: Command):
-        experiment = self.eval(cmd, env=self.experiment_env)
-        control = self.eval(cmd, env=self.control_env)
-        return Result(control, experiment)
+    def run(self, cmd: Command) -> Result:
+        try:
+            experiment = self.eval(cmd, env=self.experiment_env)
+            control = self.eval(cmd, env=self.control_env)
+            return Result(control, experiment)
+        finally:
+            self.stack.close()
 
-    def eval(self, cmd, **kwargs):
+    def eval(self, cmd: List[str], **kwargs) -> str:
         with tempfile.TemporaryDirectory() as empty:
-            out = subprocess.check_output(cmd, cwd=empty, **_text, **kwargs)
-        val = re.search(r'([0-9.]+ \w+) per loop', out).group(1)
+            out = subprocess.check_output(  # type: ignore
+                cmd, cwd=empty, **_text, **kwargs
+            )
+        val = re.search(r'([0-9.]+ \w+) per loop', out).group(1)  # type: ignore
         return val
 
 
-def upstream_url(extras='', control=None):
+def upstream_url() -> str:
     """
     >>> upstream_url()
-    'pytest-perf@git+https://github.com/jaraco/pytest-perf'
+    'https://github.com/jaraco/pytest-perf'
     """
     cmd = ['git', 'remote', 'get-url', 'origin']
-    origin = subprocess.check_output(cmd, **_text).strip()
-    base, sep, name = origin.rpartition('/')
-    rev = f'@{control}' if control else ''
-    return f'{name}{extras}@git+{origin}{rev}'
+    return subprocess.check_output(cmd, **_text).strip()  # type: ignore
+
+
+@contextlib.contextmanager
+def upstream_package(
+    url: Optional[str] = None, control: Optional[str] = None
+) -> Iterator[str]:
+    """Clone the upstream URL to be used as a local package.
+    This avoids the need of knowing the package name to install optional dependencies.
+    """
+    url = url or upstream_url()
+    rev: List[str] = ['--branch', control] if control else []
+    with tempfile.TemporaryDirectory() as tmp:
+        cmd = ['git', 'clone', *rev, url, str(tmp)]
+        subprocess.run(cmd, check=True, **_text)  # type: ignore
+        with local_package(tmp) as target:
+            yield target
+
+
+@contextlib.contextmanager
+def local_package(target: str) -> Iterator[str]:
+    """Installation context for local package to workaround ``pip`` limitations
+    (``pip`` only allow extras for a distribution archive or ``.``,
+    not local directories in general).
+
+    The installation context will ``chdir`` into an directory from where the
+    installation should take place and bind the name of the installable item
+    to the target of the ``with ... as`` clause.
+    """
+    if target != "." and os.path.isdir(target):
+        _orig_dir = os.getcwd()
+        os.chdir(target)
+        try:
+            yield "."
+        finally:
+            os.chdir(_orig_dir)
+    else:
+        yield target
