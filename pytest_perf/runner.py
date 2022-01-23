@@ -1,3 +1,4 @@
+import os
 import sys
 import re
 import subprocess
@@ -6,6 +7,7 @@ import tempfile
 
 import pip_run
 import tempora
+import pep517.meta
 
 
 _text = dict(text=True) if sys.version_info > (3, 7) else dict(universal_newlines=True)
@@ -74,11 +76,11 @@ class BenchmarkRunner:
     Result('...', '...')
     """
 
-    def __init__(self, extras=(), deps=(), control=None):
+    def __init__(self, extras=(), deps=(), control=None, target='.'):
         spec = f'[{",".join(extras)}]' if extras else ''
         self.stack = contextlib.ExitStack()
         self.control_env = self._setup_env(upstream_url(spec, control), *deps)
-        self.experiment_env = self._setup_env(f'.{spec}', *deps)
+        self.experiment_env = self._setup_env(local_url(spec, target), *deps)
 
     def _setup_env(self, *deps):
         target = self.stack.enter_context(pip_run.deps.load(*deps))
@@ -108,3 +110,14 @@ def upstream_url(extras='', control=None):
     base, sep, name = origin.rpartition('/')
     rev = f'@{control}' if control else ''
     return f'{name}{extras}@git+{origin}{rev}'
+
+
+def url_from_path(path):
+    return f"file:///{os.path.abspath(path).replace(os.sep, '/')}".replace(
+        "file:////", "file:///"
+    )
+
+
+def local_url(extras='', target='.'):
+    meta = pep517.meta.load(target)
+    return f'{meta.metadata["name"]}{extras} @ {url_from_path(target)}'
