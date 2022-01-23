@@ -1,3 +1,4 @@
+import os
 import sys
 import re
 import subprocess
@@ -78,7 +79,18 @@ class BenchmarkRunner:
         spec = f'[{",".join(extras)}]' if extras else ''
         self.stack = contextlib.ExitStack()
         self.control_env = self._setup_env(upstream_url(spec, control), *deps)
-        self.experiment_env = self._setup_env(f'.{spec}', *deps)
+        target = os.environ.get("PYTEST_PERF_WHEEL_TARGET")
+        if target:
+            if spec:
+                # Assuming wheel name is normalised we can derive the package name:
+                name, _, _ = os.path.basename(target).partition("-")
+                # Normalise file URL for both Windows and POSIX:
+                file_url = f"file:///{os.path.abspath(target).replace(os.sep, '/')}"
+                file_url = file_url.replace("file:////", "file:///")
+                target = f"{name}{spec} @ {file_url}"
+        else:
+            target = f".{spec}"
+        self.experiment_env = self._setup_env(target, *deps)
 
     def _setup_env(self, *deps):
         target = self.stack.enter_context(pip_run.deps.load(*deps))
