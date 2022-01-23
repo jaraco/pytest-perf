@@ -74,6 +74,10 @@ freeze = pass_none(tuple)
 
 @apply(dict)
 def spec_from_func(_func):
+    """
+    Given a function from an experiment file, return a
+    spec (dictionary) representing that experiment.
+    """
     yield 'name', (first_line(_func.__doc__) or _func.__name__)
     with contextlib.suppress(AttributeError):
         yield 'extras', freeze(_func.extras)
@@ -103,7 +107,7 @@ class Experiment(pytest.Item):
         self.results = self.runner.run(self.command)
 
     @property
-    def runner(self):
+    def runner(self) -> runner.BenchmarkRunner:
         return assign_params(runner_factory, self.spec)()
 
     def reportinfo(self):

@@ -100,6 +100,8 @@ def upstream_url(extras='', control=None):
     """
     >>> upstream_url()
     'pytest-perf@git+https://github.com/jaraco/pytest-perf'
+    >>> upstream_url(extras='[tests]', control='v0.9.2')
+    'pytest-perf[tests]@git+https://github.com/jaraco/pytest-perf@v0.9.2'
     """
     cmd = ['git', 'remote', 'get-url', 'origin']
     origin = subprocess.check_output(cmd, **_text).strip()
