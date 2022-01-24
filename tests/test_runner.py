@@ -64,7 +64,13 @@ def test_upstream_package(url, rev, extras, tmp_path):
             ("https://github.com/pypa/setuptools_scm.git", "v6.4.2"),
             ["toml"],
             "import setuptools_scm",
-        ]
+        ],
+        [
+            ("jaraco.context", "3.0.0"),
+            ("https://github.com/jaraco/jaraco.context", "v4.1.1"),
+            [],
+            "from jaraco import context",
+        ],
     ],
 )
 def test_benchmark_runner(target, baseline, extras, command):
