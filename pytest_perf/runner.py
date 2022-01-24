@@ -132,10 +132,14 @@ def upstream_package(
     url = url or upstream_url()
     rev: List[str] = ['--branch', control] if control else []
     with tempfile.TemporaryDirectory() as tmp:
-        cmd = ['git', 'clone', *rev, url, str(tmp)]
+        cmd = ['git', 'clone', '--depth', '1', *rev, url, str(tmp)]
         subprocess.run(cmd, check=True, **_text)  # type: ignore
         with local_package(tmp) as target:
             yield target
+
+            if os.name == "nt":
+                # Avoid cleanup errors on Windows
+                subprocess.run("rmdir /S /Q .git", shell=True, check=False)
 
 
 @contextlib.contextmanager
