@@ -14,11 +14,37 @@ from more_itertools import peekable
 from pytest_perf import runner
 
 
-def pytest_collect_file(parent, path):
+def pytest_addoption(parser):
+    group = parser.getgroup("performance tests (pytest-perf)")
+    group.addoption(
+        "--perf-target",
+        dest="perf_target",
+        default=".",
+        action="store",
+        help="directory or distribution file for which the performance tests will run"
+        " (default: %(default)r)",
+    )
+    group.addoption(
+        "--perf-baseline",
+        dest="perf_baseline",
+        default=None,
+        action="store",
+        help="URL to a git repository that will be used as a performance comparison. "
+        "When not provided the value of the `origin` remote will be used",
+    )
+
+
+def pytest_collect_file(path, parent):
+    config = parent.config
     if path.basename.endswith('.py') and 'pytest_perf' in path.read_text(
         encoding='utf-8'
     ):
-        return File.from_parent(parent, fspath=path)
+        return File.from_parent(
+            parent,
+            fspath=path,
+            target=config.getoption("perf_target"),
+            baseline=config.getoption("perf_baseline"),
+        )
 
 
 def pytest_terminal_summary(terminalreporter, config):
@@ -36,9 +62,18 @@ def pytest_sessionfinish():
 
 
 class File(pytest.File):
+    def __init__(self, fspath, parent, target=".", baseline=None):
+        super().__init__(fspath, parent)
+        self.target = target
+        self.baseline = baseline
+
     def collect(self):
         return (
-            Experiment.from_parent(self, name=f'{self.name}:{spec["name"]}', spec=spec)
+            Experiment.from_parent(
+                self,
+                name=f'{self.name}:{spec["name"]}',
+                spec={"target": self.target, "baseline": self.baseline, **spec},
+            )
             for spec in map(spec_from_func, funcs_from_name(self.name))
         )
 
