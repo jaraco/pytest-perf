@@ -19,15 +19,12 @@ def pytest_addoption(parser):
     group.addoption(
         "--perf-target",
         dest="perf_target",
-        default=".",
         action="store",
-        help="directory or distribution file for which the performance tests will run"
-        " (default: %(default)r)",
+        help="directory or distribution file for which the performance tests will run",
     )
     group.addoption(
         "--perf-baseline",
         dest="perf_baseline",
-        default=None,
         action="store",
         help="URL to a git repository that will be used as a performance comparison. "
         "When not provided the value of the `origin` remote will be used",
@@ -35,16 +32,10 @@ def pytest_addoption(parser):
 
 
 def pytest_collect_file(path, parent):
-    config = parent.config
     if path.basename.endswith('.py') and 'pytest_perf' in path.read_text(
         encoding='utf-8'
     ):
-        return File.from_parent(
-            parent,
-            fspath=path,
-            target=config.getoption("perf_target"),
-            baseline=config.getoption("perf_baseline"),
-        )
+        return File.from_parent(parent, fspath=path)
 
 
 def pytest_terminal_summary(terminalreporter, config):
@@ -62,18 +53,9 @@ def pytest_sessionfinish():
 
 
 class File(pytest.File):
-    def __init__(self, fspath, parent, target=".", baseline=None):
-        super().__init__(fspath, parent)
-        self.target = target
-        self.baseline = baseline
-
     def collect(self):
         return (
-            Experiment.from_parent(
-                self,
-                name=f'{self.name}:{spec["name"]}',
-                spec={"target": self.target, "baseline": self.baseline, **spec},
-            )
+            Experiment.from_parent(self, name=f'{self.name}:{spec["name"]}', spec=spec)
             for spec in map(spec_from_func, funcs_from_name(self.name))
         )
 
@@ -142,8 +124,18 @@ class Experiment(pytest.Item):
         self.results = self.runner.run(self.command)
 
     @property
+    def config_params(self):
+        return {
+            key.partition('perf_')[-1]: value
+            for key, value in vars(self.config.known_args_namespace).items()
+            if value is not None
+            if key.startswith('perf_')
+        }
+
+    @property
     def runner(self) -> runner.BenchmarkRunner:
-        return assign_params(runner_factory, self.spec)()
+        params = {**self.spec, **self.config_params}
+        return assign_params(runner_factory, params)()
 
     def reportinfo(self):
         return self.fspath, 0, self.name
