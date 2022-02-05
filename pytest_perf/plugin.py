@@ -14,11 +14,11 @@ from more_itertools import peekable
 from pytest_perf import runner
 
 
-def pytest_collect_file(parent, path):
-    if path.basename.endswith('.py') and 'pytest_perf' in path.read_text(
+def pytest_collect_file(parent, file_path):
+    if file_path.stem.endswith('.py') and 'pytest_perf' in file_path.read_text(
         encoding='utf-8'
     ):
-        return File.from_parent(parent, fspath=path)
+        return File.from_parent(parent, path=file_path)
 
 
 def pytest_terminal_summary(terminalreporter, config):
