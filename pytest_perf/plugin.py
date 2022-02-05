@@ -1,4 +1,3 @@
-import pytest
 import functools
 import importlib
 import re
@@ -6,7 +5,9 @@ import inspect
 import textwrap
 import contextlib
 
+import pytest
 from typing import List
+from packaging.version import Version
 from jaraco.functools import assign_params, pass_none, apply
 from jaraco.context import suppress
 from more_itertools import peekable
@@ -14,11 +15,22 @@ from more_itertools import peekable
 from pytest_perf import runner
 
 
-def pytest_collect_file(parent, file_path):
+def _collect_file_pytest7(parent, file_path):
     if file_path.stem.endswith('.py') and 'pytest_perf' in file_path.read_text(
         encoding='utf-8'
     ):
         return File.from_parent(parent, path=file_path)
+
+
+def _collect_file_pytest6(parent, path):
+    if path.basename.endswith('.py') and 'pytest_perf' in path.read_text(
+        encoding='utf-8'
+    ):
+        return File.from_parent(parent, fspath=path)
+
+
+old_pytest = Version(pytest.__version__) < Version('7')
+pytest_collect_file = _collect_file_pytest6 if old_pytest else _collect_file_pytest7
 
 
 def pytest_terminal_summary(terminalreporter, config):
