@@ -1,3 +1,8 @@
+v0.12.0
+=======
+
+#5: Added compatibility for Pytest 7.
+
 v0.11.0
 =======
 
