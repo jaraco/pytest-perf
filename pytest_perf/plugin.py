@@ -86,9 +86,26 @@ freeze = pass_none(tuple)
 
 @apply(dict)
 def spec_from_func(_func):
-    """
+    r"""
     Given a function from an experiment file, return a
     spec (dictionary) representing that experiment.
+
+    >>> import exercises
+    >>> spec = spec_from_func(exercises.simple_perf_test)
+    >>> list(spec)
+    ['name', 'warmup', 'exercise']
+    >>> spec['name']
+    'simple test'
+    >>> spec['warmup']
+    '"simple test"\nimport abc\nimport types  '
+    >>> spec['exercise']
+    '\n\ndir(abc)\nassert isinstance(abc, types.ModuleType)\n'
+
+    >>> spec = spec_from_func(exercises.deps_and_extras_perf)
+    >>> spec['deps']
+    ('path',)
+    >>> spec['extras']
+    ('testing',)
     """
     yield 'name', (first_line(_func.__doc__) or _func.__name__)
     with contextlib.suppress(AttributeError):
