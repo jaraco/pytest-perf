@@ -19,16 +19,12 @@ def pytest_addoption(parser):
     group = parser.getgroup("performance tests (pytest-perf)")
     group.addoption(
         "--perf-target",
-        dest="perf_target",
-        action="store",
         help="directory or distribution file for which the performance tests will run",
     )
     group.addoption(
         "--perf-baseline",
-        dest="perf_baseline",
-        action="store",
-        help="URL to a git repository that will be used as a performance comparison. "
-        "When not provided the value of the `origin` remote will be used",
+        help="URL to a git repository to be used as a performance comparison; "
+        "defaults to `origin` remote of local repo",
     )
 
 
