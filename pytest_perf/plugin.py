@@ -16,7 +16,7 @@ from pytest_perf import runner
 
 
 def _collect_file_pytest7(parent, file_path):
-    if file_path.stem.endswith('.py') and 'pytest_perf' in file_path.read_text(
+    if file_path.suffix == '.py' and 'pytest_perf' in file_path.read_text(
         encoding='utf-8'
     ):
         return File.from_parent(parent, path=file_path)

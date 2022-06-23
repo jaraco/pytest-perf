@@ -1,3 +1,8 @@
+v0.12.1
+=======
+
+#7: Fixed test discovery regression on Pytest 7 behavior.
+
 v0.12.0
 =======
 
