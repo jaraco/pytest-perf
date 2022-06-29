@@ -15,6 +15,19 @@ from more_itertools import peekable
 from pytest_perf import runner
 
 
+def pytest_addoption(parser):
+    group = parser.getgroup("performance tests (pytest-perf)")
+    group.addoption(
+        "--perf-target",
+        help="directory or distribution file for which the performance tests will run",
+    )
+    group.addoption(
+        "--perf-baseline",
+        help="URL to a git repository to be used as a performance comparison; "
+        "defaults to `origin` remote of local repo",
+    )
+
+
 def _collect_file_pytest7(parent, file_path):
     if file_path.suffix == '.py' and 'pytest_perf' in file_path.read_text(
         encoding='utf-8'
@@ -136,8 +149,18 @@ class Experiment(pytest.Item):
         self.results = self.runner.run(self.command)
 
     @property
+    def config_params(self):
+        return {
+            key.partition('perf_')[-1]: value
+            for key, value in vars(self.config.known_args_namespace).items()
+            if value is not None
+            if key.startswith('perf_')
+        }
+
+    @property
     def runner(self) -> runner.BenchmarkRunner:
-        return assign_params(runner_factory, self.spec)()
+        params = {**self.spec, **self.config_params}
+        return assign_params(runner_factory, params)()
 
     def reportinfo(self):
         return self.fspath, 0, self.name
