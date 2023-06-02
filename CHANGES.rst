@@ -1,3 +1,9 @@
+v0.13.0
+=======
+
+#4: Allow command line parameters to override ``target``
+and ``baseline``.
+
 v0.12.1
 =======
 
