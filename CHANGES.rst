@@ -4,6 +4,11 @@ v0.13.0
 #4: Allow command line parameters to override ``target``
 and ``baseline``.
 
+v0.12.1
+=======
+
+#7: Fixed test discovery regression on Pytest 7 behavior.
+
 v0.12.0
 =======
 

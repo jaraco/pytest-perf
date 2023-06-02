@@ -29,7 +29,7 @@ def pytest_addoption(parser):
 
 
 def _collect_file_pytest7(parent, file_path):
-    if file_path.stem.endswith('.py') and 'pytest_perf' in file_path.read_text(
+    if file_path.suffix == '.py' and 'pytest_perf' in file_path.read_text(
         encoding='utf-8'
     ):
         return File.from_parent(parent, path=file_path)
@@ -99,9 +99,26 @@ freeze = pass_none(tuple)
 
 @apply(dict)
 def spec_from_func(_func):
-    """
+    r"""
     Given a function from an experiment file, return a
     spec (dictionary) representing that experiment.
+
+    >>> import exercises
+    >>> spec = spec_from_func(exercises.simple_perf_test)
+    >>> list(spec)
+    ['name', 'warmup', 'exercise']
+    >>> spec['name']
+    'simple test'
+    >>> spec['warmup']
+    '"simple test"\nimport abc\nimport types  '
+    >>> spec['exercise']
+    '\n\ndir(abc)\nassert isinstance(abc, types.ModuleType)\n'
+
+    >>> spec = spec_from_func(exercises.deps_and_extras_perf)
+    >>> spec['deps']
+    ('path',)
+    >>> spec['extras']
+    ('testing',)
     """
     yield 'name', (first_line(_func.__doc__) or _func.__name__)
     with contextlib.suppress(AttributeError):
