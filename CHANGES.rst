@@ -1,3 +1,8 @@
+v0.13.1
+=======
+
+#8: Added a project description to the metadata.
+
 v0.13.0
 =======
 
