@@ -91,7 +91,9 @@ class BenchmarkRunner:
 
     def eval(self, cmd, **kwargs):
         with tempfile.TemporaryDirectory() as empty:
-            out = subprocess.check_output(cmd, cwd=empty, **_text, **kwargs)
+            out = subprocess.check_output(
+                cmd, cwd=empty, encoding='utf-8', **_text, **kwargs
+            )
         val = re.search(r'([0-9.]+ \w+) per loop', out).group(1)
         return val
 
@@ -104,7 +106,7 @@ def upstream_url(extras='', control=None):
     'pytest-perf[tests]@git+https://github.com/jaraco/pytest-perf@v0.9.2'
     """
     cmd = ['git', 'remote', 'get-url', 'origin']
-    origin = subprocess.check_output(cmd, **_text).strip()
+    origin = subprocess.check_output(cmd, encoding='utf-8', **_text).strip()
     base, sep, name = origin.rpartition('/')
     rev = f'@{control}' if control else ''
     return f'{name}{extras}@git+{origin}{rev}'
