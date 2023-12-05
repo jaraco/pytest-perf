@@ -3,7 +3,7 @@
 
 .. image:: https://img.shields.io/pypi/pyversions/pytest-perf.svg
 
-.. image:: https://github.com/jaraco/pytest-perf/workflows/tests/badge.svg
+.. image:: https://github.com/jaraco/pytest-perf/actions/workflows/main.yml/badge.svg
    :target: https://github.com/jaraco/pytest-perf/actions?query=workflow%3A%22tests%22
    :alt: tests
 
