@@ -1,3 +1,18 @@
+v0.14.0
+=======
+
+Features
+--------
+
+- Prefer spec_from_file_location when loading perf functions.
+
+
+Bugfixes
+--------
+
+- Suppress UnicodeDecodeError when a non-standard encoding is encountered.
+
+
 v0.13.1
 =======
 
