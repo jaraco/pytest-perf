@@ -8,9 +8,6 @@ import pip_run
 import tempora
 
 
-_text = dict(text=True) if sys.version_info > (3, 7) else dict(universal_newlines=True)
-
-
 class Command(list):
     def __init__(self, exercise='pass', warmup='pass'):
         self[:] = [
@@ -92,7 +89,7 @@ class BenchmarkRunner:
     def eval(self, cmd, **kwargs):
         with tempfile.TemporaryDirectory() as empty:
             out = subprocess.check_output(
-                cmd, cwd=empty, encoding='utf-8', **_text, **kwargs
+                cmd, cwd=empty, encoding='utf-8', text=True, **kwargs
             )
         val = re.search(r'([0-9.]+ \w+) per loop', out).group(1)
         return val
@@ -106,7 +103,7 @@ def upstream_url(extras='', control=None):
     'pytest-perf[tests]@git+https://github.com/jaraco/pytest-perf@v0.9.2'
     """
     cmd = ['git', 'remote', 'get-url', 'origin']
-    origin = subprocess.check_output(cmd, encoding='utf-8', **_text).strip()
+    origin = subprocess.check_output(cmd, encoding='utf-8', text=True).strip()
     base, sep, name = origin.rpartition('/')
     rev = f'@{control}' if control else ''
     return f'{name}{extras}@git+{origin}{rev}'
