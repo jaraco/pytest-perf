@@ -1,0 +1,1 @@
+Suppress UnicodeDecodeError when a non-standard encoding is encountered.
