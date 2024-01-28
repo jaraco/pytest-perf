@@ -65,7 +65,7 @@ class File(pytest.File):
     def collect(self):
         return (
             Experiment.from_parent(self, name=f'{self.name}:{spec["name"]}', spec=spec)
-            for spec in map(spec_from_func, funcs_from_name(self.name))
+            for spec in map(spec_from_func, funcs_from_name(self.path))
         )
 
 
@@ -73,17 +73,15 @@ runner_factory = functools.lru_cache()(runner.BenchmarkRunner)
 
 
 @suppress(Exception)
-def load_module(name):
-    spec = importlib.util.find_spec(name)
+def load_module(path):
+    spec = importlib.util.spec_from_file_location(path.stem, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
 
-def funcs_from_name(name):
-    mod_path, sep, rest = name.rpartition('.')
-    mod_name = mod_path.replace('/', '.')
-    mod = load_module(mod_name)
+def funcs_from_name(path):
+    mod = load_module(path)
     return (
         getattr(mod, name) for name in dir(mod) if re.search(r'(\b|_)perf(\b|_)', name)
     )
