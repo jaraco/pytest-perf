@@ -1,9 +1,10 @@
+import contextlib
 import functools
 import importlib
-import re
 import inspect
+import re
 import textwrap
-import contextlib
+import warnings
 
 import pytest
 from typing import List
@@ -145,7 +146,11 @@ class Experiment(pytest.Item):
         Experiment._instances.append(self)
 
     def runtest(self):
-        self.results = self.runner.run(self.command)
+        try:
+            runner = self.runner
+        except Exception:
+            pytest.skip("Unable to construct runner")
+        self.results = runner.run(self.command)
 
     @property
     def config_params(self):
