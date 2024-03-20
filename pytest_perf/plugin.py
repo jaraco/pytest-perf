@@ -44,7 +44,8 @@ def _collect_file_pytest6(parent, path):
 
 old_pytest = Version(pytest.__version__) < Version('7')
 pytest_collect_file = suppress(UnicodeDecodeError)(
-    _collect_file_pytest6 if old_pytest else _collect_file_pytest7)
+    _collect_file_pytest6 if old_pytest else _collect_file_pytest7
+)
 
 
 def pytest_terminal_summary(terminalreporter, config):
