@@ -1,3 +1,12 @@
+v0.15.0
+=======
+
+Features
+--------
+
+- Add support for bare ssh origins in repos. (#15)
+
+
 v0.14.0
 =======
 
