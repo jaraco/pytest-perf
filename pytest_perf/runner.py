@@ -95,15 +95,45 @@ class BenchmarkRunner:
         return val
 
 
+_git_origin = ['git', 'remote', 'get-url', 'origin']
+
+
 def upstream_url(extras='', control=None):
     """
     >>> upstream_url()
     'pytest-perf@git+https://github.com/jaraco/pytest-perf'
     >>> upstream_url(extras='[tests]', control='v0.9.2')
     'pytest-perf[tests]@git+https://github.com/jaraco/pytest-perf@v0.9.2'
+
+    Exercise some other circumstances by faking the git call.
+
+    >>> fp = getfixture('fp')
+    >>> _ = fp.register(_git_origin, "ssh://github.com/pypa/setuptools")
+    >>> upstream_url()
+    'setuptools@git+ssh://github.com/pypa/setuptools'
+
+    >>> _ = fp.register(_git_origin, "git@github.com:pypa/setuptools.git")
+    >>> upstream_url(control="v69.0.1")
+    'setuptools@git+ssh://git@github.com/pypa/setuptools.git@v69.0.1'
     """
-    cmd = ['git', 'remote', 'get-url', 'origin']
-    origin = subprocess.check_output(cmd, encoding='utf-8', text=True).strip()
+    origin = subprocess.check_output(_git_origin, encoding='utf-8', text=True).strip()
+    origin_url = _ensure_url(origin)
     base, sep, name = origin.rpartition('/')
+    clean_name = name.removesuffix('.git')
     rev = f'@{control}' if control else ''
-    return f'{name}{extras}@git+{origin}{rev}'
+    return f'{clean_name}{extras}@git+{origin_url}{rev}'
+
+
+def _ensure_url(origin: str):
+    """
+    Convert any implied protocol origins to a SSH URL.
+
+    >>> _ensure_url("git@github.com:jaraco/tempora.git")
+    'ssh://git@github.com/jaraco/tempora.git'
+    >>> _ensure_url("github.com:jaraco/tempora")
+    'ssh://github.com/jaraco/tempora'
+    """
+    if '://' in origin:
+        return origin
+    host, path = origin.split(':', 1)
+    return f'ssh://{host}/{path}'
