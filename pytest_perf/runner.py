@@ -4,6 +4,8 @@ import subprocess
 import contextlib
 import tempfile
 
+from .compat.py38 import removesuffix
+
 import pip_run
 import tempora
 
@@ -119,7 +121,7 @@ def upstream_url(extras='', control=None):
     origin = subprocess.check_output(_git_origin, encoding='utf-8', text=True).strip()
     origin_url = _ensure_url(origin)
     base, sep, name = origin.rpartition('/')
-    clean_name = name.removesuffix('.git')
+    clean_name = removesuffix(name, '.git')
     rev = f'@{control}' if control else ''
     return f'{clean_name}{extras}@git+{origin_url}{rev}'
 
