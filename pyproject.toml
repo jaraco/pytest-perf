@@ -24,6 +24,7 @@ dependencies = [
 	"more_itertools",
 	"jaraco.context",
 	"packaging",
+	"jaraco.compat >= 4.1",
 ]
 dynamic = ["version"]
 

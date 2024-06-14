@@ -4,10 +4,9 @@ import subprocess
 import contextlib
 import tempfile
 
-from .compat.py38 import removesuffix
-
 import pip_run
 import tempora
+from jaraco.compat.py38 import r_fix
 
 
 class Command(list):
@@ -121,7 +120,7 @@ def upstream_url(extras='', control=None):
     origin = subprocess.check_output(_git_origin, encoding='utf-8', text=True).strip()
     origin_url = _ensure_url(origin)
     base, sep, name = origin.rpartition('/')
-    clean_name = removesuffix(name, '.git')
+    clean_name = r_fix(name).removesuffix('.git')
     rev = f'@{control}' if control else ''
     return f'{clean_name}{extras}@git+{origin_url}{rev}'
 
