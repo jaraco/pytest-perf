@@ -29,7 +29,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Homepage = "https://github.com/jaraco/pytest-perf"
+Source = "https://github.com/jaraco/pytest-perf"
 
 [project.optional-dependencies]
 test = [
