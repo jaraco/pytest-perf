@@ -69,6 +69,7 @@ type = [
 	"pytest-mypy",
 
 	# local
+	"jaraco.compat>=4.2.2", # py.typed; not necessary at runtime
 ]
 
 
@@ -77,7 +78,3 @@ pytest11 = {perf = "pytest_perf.plugin"}
 
 
 [tool.setuptools_scm]
-
-
-[tool.pytest-enabler.mypy]
-# Disabled due to jaraco/skeleton#143
