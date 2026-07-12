@@ -1,11 +1,11 @@
 """
-Prototype of a reusable pytest plugin providing a ``require_repo``
+Prototype of a reusable pytest plugin providing a ``require_checkout``
 fixture that skips a test when the project is not a git checkout with
 an 'origin' remote (jaraco/pytest-perf#6).
 
 A doctest opts in with a single line::
 
-    >>> getfixture('require_repo')
+    >>> getfixture('require_checkout')
 
 Intended to graduate to a shared library (e.g. jaraco.test) once proven.
 """
@@ -13,25 +13,21 @@ Intended to graduate to a shared library (e.g. jaraco.test) once proven.
 import subprocess
 
 import pytest
+from jaraco.context import ExceptionTrap
 
-from pytest_perf.runner import _git_origin
 
-
-def git_available():
+@ExceptionTrap((OSError, subprocess.CalledProcessError)).passes
+def has_origin():
     """
     Is the project a git checkout with an 'origin' remote?
     """
-    try:
-        subprocess.run(_git_origin, capture_output=True, check=True)
-    except (OSError, subprocess.CalledProcessError):
-        return False
-    return True
+    cmd = ['git', 'remote', 'get-url', 'origin']
+    subprocess.run(cmd, capture_output=True, check=True)
 
 
 @pytest.fixture
-def require_repo():
+def require_checkout():
     """
-    Skip the test unless a git checkout with an 'origin' remote is present.
+    Skip the test unless a checkout with an 'origin' remote is present.
     """
-    if not git_available():
-        pytest.skip("requires a git checkout with an 'origin' remote")
+    has_origin() or pytest.skip("requires a repo checkout with an 'origin' remote")
