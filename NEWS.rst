@@ -1,3 +1,13 @@
+v0.15.1
+=======
+
+Bugfixes
+--------
+
+- Doctests that shell out to git are now skipped when the project is not a git checkout with an ``origin`` remote, allowing the test suite to run from a source tarball. (#6)
+- Fixed ``AttributeError`` parsing colorized ``timeit`` output on Python 3.15 (with color enabled) by stripping ANSI escape sequences before matching. (#20)
+
+
 v0.15.0
 =======
 
