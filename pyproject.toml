@@ -43,6 +43,7 @@ test = [
 
 	# local
 	"pytest-subprocess",
+	"jaraco.test >= 5.7",
 ]
 
 doc = [

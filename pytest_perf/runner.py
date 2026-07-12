@@ -67,6 +67,7 @@ class Result:
 
 class BenchmarkRunner:
     """
+    >>> getfixture('ensure_checkout')
     >>> br = BenchmarkRunner()
     >>> br.run(Command('import time; time.sleep(0.01)'))
     Result('...', '...')
@@ -101,6 +102,7 @@ _git_origin = ['git', 'remote', 'get-url', 'origin']
 
 def upstream_url(extras='', control=None):
     """
+    >>> getfixture('ensure_checkout')
     >>> upstream_url()
     'pytest-perf@git+https://github.com/jaraco/pytest-perf'
     >>> upstream_url(extras='[tests]', control='v0.9.2')
