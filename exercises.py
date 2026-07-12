@@ -1,4 +1,4 @@
-from pytest_perf.deco import extras, deps, control
+from pytest_perf.deco import control, deps, extras
 
 
 @extras('testing')

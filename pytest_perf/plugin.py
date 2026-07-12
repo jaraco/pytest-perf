@@ -1,16 +1,15 @@
+import contextlib
 import functools
 import importlib
-import re
 import inspect
+import re
 import textwrap
-import contextlib
 
 import pytest
-from typing import List
-from packaging.version import Version
-from jaraco.functools import assign_params, pass_none, apply
 from jaraco.context import suppress
+from jaraco.functools import apply, assign_params, pass_none
 from more_itertools import peekable
+from packaging.version import Version
 
 from pytest_perf import runner
 
@@ -136,7 +135,7 @@ def spec_from_func(_func):
 
 
 class Experiment(pytest.Item):
-    _instances: 'List[Experiment]' = []
+    _instances: 'list[Experiment]' = []
     results = None
 
     def __init__(self, name, parent, spec):

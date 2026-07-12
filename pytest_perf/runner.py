@@ -1,7 +1,7 @@
-import sys
+import contextlib
 import re
 import subprocess
-import contextlib
+import sys
 import tempfile
 
 import pip_run
