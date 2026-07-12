@@ -1,0 +1,1 @@
+Doctests that shell out to git are now skipped when the project is not a git checkout with an ``origin`` remote, allowing the test suite to run from a source tarball.
