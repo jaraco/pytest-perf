@@ -30,6 +30,7 @@ dependencies = [
 	"jaraco.context",
 	"packaging",
 	"jaraco.compat >= 4.1",
+	"jaraco.text >= 4.3",
 ]
 dynamic = ["version"]
 

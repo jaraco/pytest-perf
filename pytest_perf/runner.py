@@ -7,6 +7,7 @@ import tempfile
 import pip_run
 import tempora
 from jaraco.compat.py38 import r_fix
+from jaraco.text import strip_ansi
 
 
 class Command(list):
@@ -93,7 +94,9 @@ class BenchmarkRunner:
             out = subprocess.check_output(
                 cmd, cwd=empty, encoding='utf-8', text=True, **kwargs
             )
-        val = re.search(r'([0-9.]+ \w+) per loop', out).group(1)
+        # Python 3.15+ colorizes timeit output when color is enabled (e.g.
+        # FORCE_COLOR); strip escape sequences before parsing. jaraco/pytest-perf#20
+        val = re.search(r'([0-9.]+ \w+) per loop', strip_ansi(out)).group(1)
         return val
 
 

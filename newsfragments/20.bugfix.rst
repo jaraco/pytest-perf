@@ -1,0 +1,1 @@
+Fixed ``AttributeError`` parsing colorized ``timeit`` output on Python 3.15 (with color enabled) by stripping ANSI escape sequences before matching.
