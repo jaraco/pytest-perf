@@ -24,8 +24,8 @@ requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
 	"pip-run>=8.5",
-	"tempora>=4.1",
-	"jaraco.functools",
+	"tempora>=5.12", # for Duration
+	"jaraco.functools>=4.6", # for signed
 	"more_itertools",
 	"jaraco.context",
 	"packaging",
