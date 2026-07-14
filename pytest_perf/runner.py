@@ -14,8 +14,6 @@ from jaraco.compat.py38 import r_fix
 from jaraco.functools import signed
 from jaraco.text import strip_ansi
 
-_signed_duration = signed(str)
-
 
 class Command(list):
     def __init__(self, exercise: str = 'pass', warmup: str = 'pass') -> None:
@@ -32,6 +30,28 @@ class Command(list):
 
 
 class Result:
+    """
+    Compare a control and experiment timing as produced by timeit.
+
+    >>> r = Result('34.2 nsec', '38.1 nsec')
+    >>> r.experiment
+    Duration(Decimal('38.1'))
+    >>> r.delta
+    Duration(Decimal('3.9'))
+    >>> r.significant
+    False
+    >>> print(r)
+    38.1 nsec (+3.9 nsec, 11%)
+
+    When the control rounds to zero, variance is infinite (or zero when
+    nothing changed) rather than raising:
+
+    >>> Result('0 nsec', '5 nsec').variance
+    inf
+    >>> Result('0 nsec', '0 nsec').variance
+    0.0
+    """
+
     # by default, anything under 100% increase is not significant
     tolerance = 1.0
 
@@ -69,9 +89,8 @@ class Result:
         return tempora.Duration.parse(time)
 
     def __str__(self) -> str:
-        return (
-            f'{self.experiment} ({_signed_duration(self.delta)}, {self.variance:.0%})'
-        )
+        delta = signed(str)(self.delta)
+        return f'{self.experiment} ({delta}, {self.variance:.0%})'
 
     def __repr__(self) -> str:
         return f'Result({self.control_text!r}, {self.experiment_text!r})'
