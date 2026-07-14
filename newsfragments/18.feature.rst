@@ -1,1 +1,0 @@
-Compare timings with nanosecond precision using ``tempora.Duration``, so sub-microsecond changes are detected rather than rounded away. (#18)

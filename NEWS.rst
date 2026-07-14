@@ -1,3 +1,13 @@
+v0.16.0
+=======
+
+Features
+--------
+
+- Added type annotations and a ``py.typed`` marker so downstream projects can type-check against pytest-perf. (#16)
+- Compare timings with nanosecond precision using ``tempora.Duration``, so sub-microsecond changes are detected rather than rounded away. (#18)
+
+
 v0.15.1
 =======
 

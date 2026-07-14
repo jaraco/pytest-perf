@@ -1,1 +1,0 @@
-Added type annotations and a ``py.typed`` marker so downstream projects can type-check against pytest-perf. (#16)
