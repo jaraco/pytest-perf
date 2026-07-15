@@ -93,7 +93,9 @@ def load_module(path: Path) -> ModuleType:
 def funcs_from_name(path: Path) -> Iterator[Any]:
     mod = load_module(path)
     return (
-        getattr(mod, name) for name in dir(mod) if re.search(r'(\b|_)perf(\b|_)', name)
+        getattr(mod, name)
+        for name in dir(mod)
+        if re.search(r'(\b|_)(perf|import_time)(\b|_)', name)
     )
 
 
@@ -128,8 +130,20 @@ def spec_from_func(_func: Any) -> Iterator[tuple[str, Any]]:
     ('path',)
     >>> spec['extras']
     ('testing',)
+
+    A function whose name signals ``import_time`` is measured as an
+    import-time exercise (jaraco/pytest-perf#12); its whole body is the
+    exercise:
+
+    >>> spec = spec_from_func(exercises.import_time_check)
+    >>> spec['import_time']
+    True
+    >>> spec['exercise'].strip()
+    'import pytest_perf  # noqa: F401'
     """
     yield 'name', (first_line(_func.__doc__) or _func.__name__)
+    if re.search(r'(\b|_)import_time(\b|_)', _func.__name__):
+        yield 'import_time', True
     with contextlib.suppress(AttributeError):
         yield 'extras', freeze(_func.extras)
     with contextlib.suppress(AttributeError):

@@ -22,11 +22,27 @@ Run performance tests against the mainline code.
 Usage
 =====
 
-To use it, include pytest-perf in the test dependencies for your project, then create some Python module in your package. The plugin will include any module that contains the text "pytest_perf" and will run performance tests on each function containing "perf" in the name.
+To use it, include pytest-perf in the test dependencies for your project, then create some Python module in your package. The plugin will include any module that contains the text "pytest_perf" and will run performance tests on each function containing "perf" (or "import_time") in the name.
 
 Tests don't execute the module directly, but instead parse out the code of the function in two parts, the warmup and the test, separated by a "# end warmup" comment, and then passes those to the ``timeit`` module.
 
 See the ``exercises.py`` module for example usage.
+
+Import latency
+==============
+
+``timeit`` cannot measure the cost of importing a module, because after the
+first loop the module is cached in ``sys.modules`` and subsequent loops only
+measure the cache lookup. To measure import latency instead, name the function
+with ``import_time`` (in place of ``perf``) and let its body perform the
+import::
+
+    def check_import_time():
+        import importlib_metadata
+
+Such a function is traced with ``python -X importtime`` in a fresh interpreter
+(sampled a few times, reporting the fastest) rather than timed with ``timeit``,
+capturing the real cold-import cost against both the control and the experiment.
 
 Design
 ======

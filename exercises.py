@@ -20,6 +20,10 @@ def simple_perf_test():
     assert isinstance(abc, types.ModuleType)
 
 
+def import_time_check():
+    import pytest_perf  # noqa: F401
+
+
 @control('v0.9.2')
 def diff_from_oh_nine_two_perf():
     pass

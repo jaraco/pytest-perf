@@ -16,17 +16,81 @@ from jaraco.text import strip_ansi
 
 
 class Command(list):
-    def __init__(self, exercise: str = 'pass', warmup: str = 'pass') -> None:
-        self[:] = [
-            sys.executable,
-            '-s',
-            '-m',
-            'timeit',
-            '--setup',
-            warmup,
-            '--',
-            exercise,
-        ]
+    """
+    Build the argv to measure an exercise.
+
+    By default, time the exercise with ``timeit``:
+
+    >>> Command('dir()')[1:]
+    ['-s', '-m', 'timeit', '--setup', 'pass', '--', 'dir()']
+
+    For an import-time exercise, ``timeit`` is unsuitable because the
+    module is cached in ``sys.modules`` after the first loop, so instead
+    trace a cold import with ``-X importtime``. jaraco/pytest-perf#12
+
+    >>> Command('import json', import_time=True)[1:]
+    ['-X', 'importtime', '-c', 'import json']
+    """
+
+    #: number of times to sample; the fastest is reported. ``timeit``
+    #: already loops internally, but a cold import runs only once per
+    #: process, so import-time exercises sample several processes.
+    samples = 1
+
+    def __init__(
+        self, exercise: str = 'pass', warmup: str = 'pass', import_time: bool = False
+    ) -> None:
+        self.import_time = import_time
+        if import_time:
+            self.samples = 5
+            self[:] = [sys.executable, '-X', 'importtime', '-c', exercise]
+        else:
+            self[:] = [
+                sys.executable,
+                '-s',
+                '-m',
+                'timeit',
+                '--setup',
+                warmup,
+                '--',
+                exercise,
+            ]
+
+    def parse(self, output: str) -> str:
+        """
+        Extract a timing (as a duration string) from this command's output.
+        """
+        parser = _parse_importtime if self.import_time else _parse_timeit
+        return parser(output)
+
+
+def _parse_timeit(output: str) -> str:
+    # Python 3.15+ colorizes timeit output when color is enabled (e.g.
+    # FORCE_COLOR); strip escape sequences before parsing. jaraco/pytest-perf#20
+    return re.search(  # type: ignore[union-attr] # output always matches
+        r'([0-9.]+ \w+) per loop', strip_ansi(output)
+    ).group(1)
+
+
+def _parse_importtime(output: str) -> str:
+    r"""
+    Extract the cumulative import time (microseconds) of the module
+    imported last from a ``-X importtime`` trace.
+
+    Interpreter start-up imports (``site`` and friends) complete before
+    the ``-c`` exercise runs, so the final trace line is the module the
+    exercise requested, and its cumulative time is the total cost of the
+    import. jaraco/pytest-perf#12
+
+    >>> trace = '''
+    ... import time: self [us] | cumulative | imported package
+    ... import time:       656 |       2706 | site
+    ... import time:       224 |       6174 | json'''
+    >>> _parse_importtime(trace)
+    '6174 usec'
+    """
+    cumulative = re.findall(r'import time:\s*\d+\s*\|\s*(\d+)', output)
+    return f'{cumulative[-1]} usec'
 
 
 class Result:
@@ -125,16 +189,21 @@ class BenchmarkRunner:
         return Result(control, experiment)
 
     def eval(self, cmd: Command, **kwargs: Any) -> str:
+        samples = (self._sample(cmd, **kwargs) for _ in range(cmd.samples))
+        return min(samples, key=tempora.Duration.parse)
+
+    def _sample(self, cmd: Command, **kwargs: Any) -> str:
         with tempfile.TemporaryDirectory() as empty:
+            # -X importtime writes its trace to stderr, so capture it too.
             out = subprocess.check_output(
-                cmd, cwd=empty, encoding='utf-8', text=True, **kwargs
+                cmd,
+                cwd=empty,
+                encoding='utf-8',
+                text=True,
+                stderr=subprocess.STDOUT,
+                **kwargs,
             )
-        # Python 3.15+ colorizes timeit output when color is enabled (e.g.
-        # FORCE_COLOR); strip escape sequences before parsing. jaraco/pytest-perf#20
-        val = re.search(  # type: ignore[union-attr] # output always matches
-            r'([0-9.]+ \w+) per loop', strip_ansi(out)
-        ).group(1)
-        return val
+        return cmd.parse(out)
 
 
 _git_origin = ['git', 'remote', 'get-url', 'origin']
