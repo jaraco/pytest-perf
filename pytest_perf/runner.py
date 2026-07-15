@@ -110,7 +110,8 @@ def _parse_importtime(output: str) -> str:
     cumulative = re.findall(r'import time:\s*\d+\s*\|\s*(\d+)', output)
     if not cumulative:
         raise ImportTimeUnsupported(
-            "'-X importtime' produced no trace; import latency requires CPython"
+            "'-X importtime' produced no trace; "
+            "this interpreter can't measure import latency"
         )
     return f'{cumulative[-1]} usec'
 
