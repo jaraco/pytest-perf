@@ -72,6 +72,16 @@ def _parse_timeit(output: str) -> str:
     ).group(1)
 
 
+class ImportTimeUnsupported(Exception):
+    """
+    The interpreter emitted no ``-X importtime`` trace.
+
+    PyPy (and other non-CPython interpreters) accept ``-X importtime``
+    but produce no output, so import latency cannot be measured there.
+    jaraco/pytest-perf#12
+    """
+
+
 def _parse_importtime(output: str) -> str:
     r"""
     Extract the cumulative import time (microseconds) of the module
@@ -88,8 +98,20 @@ def _parse_importtime(output: str) -> str:
     ... import time:       224 |       6174 | json'''
     >>> _parse_importtime(trace)
     '6174 usec'
+
+    An interpreter that emits no trace (e.g. PyPy) is reported as
+    unsupported rather than yielding a bogus measurement:
+
+    >>> _parse_importtime('')
+    Traceback (most recent call last):
+    ...
+    pytest_perf.runner.ImportTimeUnsupported: ...
     """
     cumulative = re.findall(r'import time:\s*\d+\s*\|\s*(\d+)', output)
+    if not cumulative:
+        raise ImportTimeUnsupported(
+            "'-X importtime' produced no trace; import latency requires CPython"
+        )
     return f'{cumulative[-1]} usec'
 
 

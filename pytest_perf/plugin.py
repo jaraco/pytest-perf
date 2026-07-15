@@ -169,7 +169,10 @@ class Experiment(pytest.Item):
         Experiment._instances.append(self)
 
     def runtest(self) -> None:
-        self.results = self.runner.run(self.command)
+        try:
+            self.results = self.runner.run(self.command)
+        except runner.ImportTimeUnsupported as exc:
+            pytest.skip(str(exc))
 
     @property
     def config_params(self) -> dict[str, Any]:
@@ -192,4 +195,4 @@ class Experiment(pytest.Item):
         return f'{self.name}: {self.results}'
 
     def __bool__(self) -> bool:
-        return hasattr(self, 'results')
+        return self.results is not None
