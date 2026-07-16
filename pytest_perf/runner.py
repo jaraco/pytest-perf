@@ -31,6 +31,9 @@ class Command(list):
     #: number of times to sample; the fastest is reported
     samples = 1
 
+    #: how to route the subprocess's stderr (see ``subprocess.check_output``)
+    stderr: int | None = None
+
     @classmethod
     def create(
         cls, class_: str, exercise: str = 'pass', warmup: str = 'pass'
@@ -102,6 +105,9 @@ class ImportTime(Command):
     #: a cold import runs only once per process, so sample several
     #: processes and report the fastest.
     samples = 5
+
+    #: -X importtime writes its trace to stderr, so capture it
+    stderr = subprocess.STDOUT
 
     def __init__(self, exercise: str = 'pass') -> None:
         self[:] = [sys.executable, '-X', 'importtime', '-c', exercise]
@@ -246,8 +252,7 @@ class BenchmarkRunner:
                 cwd=empty,
                 encoding='utf-8',
                 text=True,
-                # -X importtime writes its trace to stderr
-                stderr=subprocess.STDOUT,
+                stderr=cmd.stderr,
                 **kwargs,
             )
         return cmd.parse(out)
