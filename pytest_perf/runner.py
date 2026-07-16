@@ -11,21 +11,48 @@ from typing import Any
 import pip_run
 import tempora
 from jaraco.compat.py38 import r_fix
-from jaraco.functools import signed
+from jaraco.functools import assign_params, signed
 from jaraco.text import strip_ansi
 
 
 class Command(list):
     """
-    Build the argv to time an exercise with ``timeit``.
+    Base for commands that measure an exercise in a subprocess.
 
-    >>> Command('dir()')[1:]
-    ['-s', '-m', 'timeit', '--setup', 'pass', '--', 'dir()']
+    Construct a concrete command with :meth:`create`, which selects the
+    subclass named by ``class_``:
+
+    >>> Command.create('perf').__class__.__name__
+    'Perf'
+    >>> Command.create('import_time').__class__.__name__
+    'ImportTime'
     """
 
-    #: number of times to sample; the fastest is reported. ``timeit``
-    #: loops internally, so a single sample suffices.
+    #: number of times to sample; the fastest is reported
     samples = 1
+
+    @classmethod
+    def create(
+        cls, class_: str, exercise: str = 'pass', warmup: str = 'pass'
+    ) -> Command:
+        (subclass,) = (
+            sub
+            for sub in cls.__subclasses__()
+            if sub.__name__.lower() == class_.replace('_', '')
+        )
+        return assign_params(subclass, dict(exercise=exercise, warmup=warmup))()
+
+    def parse(self, output: str) -> str:  # pragma: no cover
+        raise NotImplementedError
+
+
+class Perf(Command):
+    """
+    Time an exercise with ``timeit``.
+
+    >>> Perf('dir()')[1:]
+    ['-s', '-m', 'timeit', '--setup', 'pass', '--', 'dir()']
+    """
 
     def __init__(self, exercise: str = 'pass', warmup: str = 'pass') -> None:
         self[:] = [
@@ -60,15 +87,15 @@ class ImportTimeUnsupported(Exception):
     """
 
 
-class ImportTimeCommand(Command):
+class ImportTime(Command):
     """
-    Build the argv to trace a cold import with ``-X importtime``.
+    Trace a cold import with ``-X importtime``.
 
     ``timeit`` is unsuitable for imports because the module is cached in
     ``sys.modules`` after the first loop, measuring only the cache hit.
     jaraco/pytest-perf#12
 
-    >>> ImportTimeCommand('import json')[1:]
+    >>> ImportTime('import json')[1:]
     ['-X', 'importtime', '-c', 'import json']
     """
 
@@ -93,13 +120,13 @@ class ImportTimeCommand(Command):
         ... import time: self [us] | cumulative | imported package
         ... import time:       656 |       2706 | site
         ... import time:       224 |       6174 | json'''
-        >>> ImportTimeCommand().parse(trace)
+        >>> ImportTime().parse(trace)
         '6174 usec'
 
         An interpreter that emits no trace (e.g. PyPy) is reported as
         unsupported rather than yielding a bogus measurement:
 
-        >>> ImportTimeCommand().parse('')
+        >>> ImportTime().parse('')
         Traceback (most recent call last):
         ...
         pytest_perf.runner.ImportTimeUnsupported: ...
@@ -184,7 +211,7 @@ class BenchmarkRunner:
     """
     >>> getfixture('ensure_checkout')
     >>> br = BenchmarkRunner()
-    >>> br.run(Command('import time; time.sleep(0.01)'))
+    >>> br.run(Perf('import time; time.sleep(0.01)'))
     Result('...', '...')
     """
 

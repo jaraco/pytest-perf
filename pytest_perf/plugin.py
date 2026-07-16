@@ -90,13 +90,8 @@ def load_module(path: Path) -> ModuleType:
     return mod
 
 
-#: match a function to collect; the captured ``kind`` selects the Command class
+#: match a function to collect; the captured ``kind`` selects the Command subclass
 _exercise = re.compile(r'(\b|_)(?P<kind>import_time|perf)(\b|_)')
-
-command_classes = {
-    'perf': runner.Command,
-    'import_time': runner.ImportTimeCommand,
-}
 
 
 def funcs_from_name(path: Path) -> Iterator[Any]:
@@ -125,8 +120,8 @@ def spec_from_func(_func: Any) -> Iterator[tuple[str, Any]]:
     ['name', 'class_', 'warmup', 'exercise']
     >>> spec['name']
     'simple test'
-    >>> spec['class_'].__name__
-    'Command'
+    >>> spec['class_']
+    'perf'
     >>> spec['warmup']
     '"simple test"\nimport abc\nimport types  '
     >>> spec['exercise']
@@ -139,18 +134,18 @@ def spec_from_func(_func: Any) -> Iterator[tuple[str, Any]]:
     ('testing',)
 
     A function whose name signals ``import_time`` selects the
-    import-time Command class (jaraco/pytest-perf#12); its whole body is
-    the exercise:
+    import-time Command subclass (jaraco/pytest-perf#12); its whole body
+    is the exercise:
 
     >>> spec = spec_from_func(exercises.import_time_check)
-    >>> spec['class_'].__name__
-    'ImportTimeCommand'
+    >>> spec['class_']
+    'import_time'
     >>> spec['exercise'].strip()
     'import pytest_perf  # noqa: F401'
     """
     yield 'name', (first_line(_func.__doc__) or _func.__name__)
     kind = _exercise.search(_func.__name__)['kind']  # type: ignore[index] # collected names always match
-    yield 'class_', command_classes[kind]
+    yield 'class_', kind
     with contextlib.suppress(AttributeError):
         yield 'extras', freeze(_func.extras)
     with contextlib.suppress(AttributeError):
@@ -172,7 +167,7 @@ class Experiment(pytest.Item):
     def __init__(self, name: str, parent: pytest.Collector, spec: dict[str, Any]):
         super().__init__(name, parent)
         self.spec = spec
-        self.command = assign_params(spec['class_'], spec)()
+        self.command = assign_params(runner.Command.create, spec)()
         Experiment._instances.append(self)
 
     def runtest(self) -> None:
