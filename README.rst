@@ -19,14 +19,135 @@
 
 Run performance tests against the mainline code.
 
-Usage
-=====
+``pytest-perf`` measures whether a change makes code slower by
+benchmarking the working copy (the *experiment*) against the mainline
+(the *control*) and reporting the difference. It installs each version
+into its own environment, runs the same exercise against both, and
+fails only when a regression exceeds the tolerance.
 
-To use it, include pytest-perf in the test dependencies for your project, then create some Python module in your package. The plugin will include any module that contains the text "pytest_perf" and will run performance tests on each function containing "perf" (or "import_time") in the name.
+Installation
+============
 
-Tests don't execute the module directly, but instead parse out the code of the function in two parts, the warmup and the test, separated by a "# end warmup" comment, and then passes those to the ``timeit`` module.
+Add ``pytest-perf`` to your project's test dependencies. For example,
+in ``pyproject.toml``::
 
-See the ``exercises.py`` module for example usage.
+    [project.optional-dependencies]
+    test = [
+        "pytest-perf",
+    ]
+
+The package registers a pytest plugin automatically; no further
+configuration is required.
+
+Writing performance tests
+=========================
+
+Create a Python module anywhere pytest will collect it (for example
+``exercises.py`` at the project root). Two conventions drive collection:
+
+- The plugin only inspects modules whose source contains the text
+  ``pytest_perf``. Importing something from the package —
+  ``from pytest_perf.deco import ...`` — is enough, but even a bare
+  comment mentioning ``pytest_perf`` qualifies the module.
+- Within such a module, every function whose name contains ``perf``
+  (or ``import_time``; see `Import latency`_) becomes a benchmark.
+
+A benchmark function is not executed directly. Instead, its source is
+split into two parts at a ``# end warmup`` comment: the *warmup* runs
+once as setup, and the *exercise* (everything after the comment) is the
+code that gets timed. Both parts are handed to the ``timeit`` module::
+
+    def dict_construction_perf():
+        "constructing a dict"
+        from itertools import product
+
+        pairs = list(product(range(100), range(100)))  # end warmup
+
+        dict(pairs)
+
+Here the imports and data setup run once as warmup, and only
+``dict(pairs)`` is timed. If a function has no ``# end warmup`` marker,
+its whole body is the exercise.
+
+The first line of the docstring, when present, names the benchmark in
+the report; otherwise the function name is used.
+
+Decorators
+==========
+
+The ``pytest_perf.deco`` module supplies decorators to control how the
+benchmark's environments are built:
+
+``@deps('name', ...)``
+    Install additional distributions into both environments before
+    running the exercise. Use this when the exercise imports a package
+    that isn't otherwise a dependency.
+
+``@extras('name', ...)``
+    Install the named `extras
+    <https://packaging.python.org/en/latest/specifications/dependency-specifiers/#extras>`_
+    of the project (e.g. ``testing``) into both environments.
+
+``@control('rev')``
+    Pin the control environment to a specific git revision (tag,
+    branch, or commit) instead of the mainline head. Handy for measuring
+    the cumulative change since a released version.
+
+::
+
+    from pytest_perf.deco import control, deps, extras
+
+    @extras('testing')
+    @deps('path')
+    def deps_and_extras_perf():
+        "with deps and extras"
+        import path
+        import pytest  # end warmup
+
+        assert type(pytest) is type(path)
+
+    @control('v0.9.2')
+    def diff_from_oh_nine_two_perf():
+        pass
+
+See the ``exercises.py`` module in this repository for more examples.
+
+Running the tests
+=================
+
+Run pytest as usual; the benchmarks are collected and executed
+alongside your other tests::
+
+    pytest
+
+Building two isolated environments and installing into them takes time,
+so restrict a run to the perf module when iterating::
+
+    pytest exercises.py
+
+Results are printed in a ``perf`` section of the terminal summary, one
+line per benchmark, showing the experiment timing, the delta from the
+control, and the percentage change::
+
+    ------------------------------ perf ------------------------------
+    exercises.py:simple test: 38.1 nsec (+3.9 nsec, 11%)
+
+A benchmark fails only when the slowdown exceeds the tolerance
+(a 100% increase by default), so ordinary run-to-run noise won't break
+your build.
+
+Options
+=======
+
+Two command-line options adjust what is compared:
+
+``--perf-baseline URL``
+    The git repository to use as the control. Defaults to the ``origin``
+    remote of the local repository.
+
+``--perf-target DIR``
+    The directory or distribution file to use as the experiment.
+    Defaults to the current project (``.``).
 
 Import latency
 ==============
@@ -43,6 +164,9 @@ import::
 Such a function is traced with ``python -X importtime`` in a fresh interpreter
 (sampled a few times, reporting the fastest) rather than timed with ``timeit``,
 capturing the real cold-import cost against both the control and the experiment.
+
+Import latency cannot be measured on interpreters that don't emit an
+``-X importtime`` trace (such as PyPy); those benchmarks are skipped.
 
 Design
 ======
