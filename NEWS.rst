@@ -1,3 +1,12 @@
+v1.0.0
+======
+
+Deprecations and Removals
+-------------------------
+
+- Declared the project stable with the first 1.0 release.
+
+
 v0.17.0
 =======
 
