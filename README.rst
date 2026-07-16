@@ -120,10 +120,13 @@ alongside your other tests::
 
     pytest
 
-Building two isolated environments and installing into them takes time,
-so restrict a run to the perf module when iterating::
+Use pytest conventions to downselect the runs::
 
     pytest exercises.py
+    # or for only perf tests across any number of files
+    pytest -k perf
+    # or for a specific test by name
+    pytest -k deps_and_extras_perf
 
 Results are printed in a ``perf`` section of the terminal summary, one
 line per benchmark, showing the experiment timing, the delta from the
