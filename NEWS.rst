@@ -1,3 +1,12 @@
+v0.17.0
+=======
+
+Features
+--------
+
+- Added support for measuring import latency. A benchmark function whose name contains ``import_time`` (e.g. ``check_import_time``) is timed with ``python -X importtime`` instead of ``timeit``, which cannot measure imports because ``sys.modules`` caches them after the first loop. On interpreters that don't emit an ``-X importtime`` trace (e.g. PyPy), such benchmarks are skipped. (#12)
+
+
 v0.16.0
 =======
 
