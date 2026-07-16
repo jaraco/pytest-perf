@@ -80,13 +80,9 @@ class Perf(Command):
         ).group(1)
 
 
-class ImportTimeUnsupported(Exception):
+class Unsupported(Exception):
     """
-    The interpreter emitted no ``-X importtime`` trace.
-
-    PyPy (and other non-CPython interpreters) accept ``-X importtime``
-    but produce no output, so import latency cannot be measured there.
-    jaraco/pytest-perf#12
+    This interpreter can't perform the requested measurement.
     """
 
 
@@ -101,6 +97,15 @@ class ImportTime(Command):
     >>> ImportTime('import json')[1:]
     ['-X', 'importtime', '-c', 'import json']
     """
+
+    class Unsupported(Unsupported):
+        """
+        The interpreter emitted no ``-X importtime`` trace.
+
+        PyPy (and other non-CPython interpreters) accept ``-X importtime``
+        but produce no output, so import latency cannot be measured there.
+        jaraco/pytest-perf#12
+        """
 
     #: a cold import runs only once per process, so sample several
     #: processes and report the fastest.
@@ -135,11 +140,11 @@ class ImportTime(Command):
         >>> ImportTime().parse('')
         Traceback (most recent call last):
         ...
-        pytest_perf.runner.ImportTimeUnsupported: ...
+        pytest_perf.runner.ImportTime.Unsupported: ...
         """
         cumulative = re.findall(r'import time:\s*\d+\s*\|\s*(\d+)', output)
         if not cumulative:
-            raise ImportTimeUnsupported(
+            raise self.Unsupported(
                 "'-X importtime' produced no trace; "
                 "this interpreter can't measure import latency"
             )

@@ -173,7 +173,7 @@ class Experiment(pytest.Item):
     def runtest(self) -> None:
         try:
             self.results = self.runner.run(self.command)
-        except runner.ImportTimeUnsupported as exc:
+        except runner.Unsupported as exc:
             pytest.skip(str(exc))
 
     @property
