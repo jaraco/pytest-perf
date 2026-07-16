@@ -148,7 +148,7 @@ class ImportTime(Command):
         ... import time:       656 |       2706 | site
         ... import time:       224 |       6174 | json'''
         >>> ImportTime().parse(trace)
-        '6174 usec'
+        '6174 µsec'
 
         An interpreter that emits no trace (e.g. PyPy) is reported as
         unsupported rather than yielding a bogus measurement:
@@ -164,7 +164,9 @@ class ImportTime(Command):
                 "'-X importtime' produced no trace; "
                 "this interpreter can't measure import latency"
             )
-        return f'{cumulative[-1]} usec'
+        # µ is the micro sign (U+00B5) that tempora.Duration.parse accepts;
+        # the Greek mu (U+03BC) is rejected. jaraco/pytest-perf#12
+        return f'{cumulative[-1]} µsec'
 
 
 class Result:
