@@ -17,59 +17,37 @@ from jaraco.text import strip_ansi
 
 class Command(list):
     """
-    Build the argv to measure an exercise.
-
-    By default, time the exercise with ``timeit``:
+    Build the argv to time an exercise with ``timeit``.
 
     >>> Command('dir()')[1:]
     ['-s', '-m', 'timeit', '--setup', 'pass', '--', 'dir()']
-
-    For an import-time exercise, ``timeit`` is unsuitable because the
-    module is cached in ``sys.modules`` after the first loop, so instead
-    trace a cold import with ``-X importtime``. jaraco/pytest-perf#12
-
-    >>> Command('import json', import_time=True)[1:]
-    ['-X', 'importtime', '-c', 'import json']
     """
 
     #: number of times to sample; the fastest is reported. ``timeit``
-    #: already loops internally, but a cold import runs only once per
-    #: process, so import-time exercises sample several processes.
+    #: loops internally, so a single sample suffices.
     samples = 1
 
-    def __init__(
-        self, exercise: str = 'pass', warmup: str = 'pass', import_time: bool = False
-    ) -> None:
-        self.import_time = import_time
-        if import_time:
-            self.samples = 5
-            self[:] = [sys.executable, '-X', 'importtime', '-c', exercise]
-        else:
-            self[:] = [
-                sys.executable,
-                '-s',
-                '-m',
-                'timeit',
-                '--setup',
-                warmup,
-                '--',
-                exercise,
-            ]
+    def __init__(self, exercise: str = 'pass', warmup: str = 'pass') -> None:
+        self[:] = [
+            sys.executable,
+            '-s',
+            '-m',
+            'timeit',
+            '--setup',
+            warmup,
+            '--',
+            exercise,
+        ]
 
     def parse(self, output: str) -> str:
         """
-        Extract a timing (as a duration string) from this command's output.
+        Extract a timing (as a duration string) from ``timeit`` output.
         """
-        parser = _parse_importtime if self.import_time else _parse_timeit
-        return parser(output)
-
-
-def _parse_timeit(output: str) -> str:
-    # Python 3.15+ colorizes timeit output when color is enabled (e.g.
-    # FORCE_COLOR); strip escape sequences before parsing. jaraco/pytest-perf#20
-    return re.search(  # type: ignore[union-attr] # output always matches
-        r'([0-9.]+ \w+) per loop', strip_ansi(output)
-    ).group(1)
+        # Python 3.15+ colorizes timeit output when color is enabled (e.g.
+        # FORCE_COLOR); strip escape sequences before parsing. jaraco/pytest-perf#20
+        return re.search(  # type: ignore[union-attr] # output always matches
+            r'([0-9.]+ \w+) per loop', strip_ansi(output)
+        ).group(1)
 
 
 class ImportTimeUnsupported(Exception):
@@ -82,38 +60,57 @@ class ImportTimeUnsupported(Exception):
     """
 
 
-def _parse_importtime(output: str) -> str:
-    r"""
-    Extract the cumulative import time (microseconds) of the module
-    imported last from a ``-X importtime`` trace.
-
-    Interpreter start-up imports (``site`` and friends) complete before
-    the ``-c`` exercise runs, so the final trace line is the module the
-    exercise requested, and its cumulative time is the total cost of the
-    import. jaraco/pytest-perf#12
-
-    >>> trace = '''
-    ... import time: self [us] | cumulative | imported package
-    ... import time:       656 |       2706 | site
-    ... import time:       224 |       6174 | json'''
-    >>> _parse_importtime(trace)
-    '6174 usec'
-
-    An interpreter that emits no trace (e.g. PyPy) is reported as
-    unsupported rather than yielding a bogus measurement:
-
-    >>> _parse_importtime('')
-    Traceback (most recent call last):
-    ...
-    pytest_perf.runner.ImportTimeUnsupported: ...
+class ImportTimeCommand(Command):
     """
-    cumulative = re.findall(r'import time:\s*\d+\s*\|\s*(\d+)', output)
-    if not cumulative:
-        raise ImportTimeUnsupported(
-            "'-X importtime' produced no trace; "
-            "this interpreter can't measure import latency"
-        )
-    return f'{cumulative[-1]} usec'
+    Build the argv to trace a cold import with ``-X importtime``.
+
+    ``timeit`` is unsuitable for imports because the module is cached in
+    ``sys.modules`` after the first loop, measuring only the cache hit.
+    jaraco/pytest-perf#12
+
+    >>> ImportTimeCommand('import json')[1:]
+    ['-X', 'importtime', '-c', 'import json']
+    """
+
+    #: a cold import runs only once per process, so sample several
+    #: processes and report the fastest.
+    samples = 5
+
+    def __init__(self, exercise: str = 'pass') -> None:
+        self[:] = [sys.executable, '-X', 'importtime', '-c', exercise]
+
+    def parse(self, output: str) -> str:
+        r"""
+        Extract the cumulative import time (microseconds) of the module
+        imported last from a ``-X importtime`` trace.
+
+        Interpreter start-up imports (``site`` and friends) complete
+        before the ``-c`` exercise runs, so the final trace line is the
+        module the exercise requested, and its cumulative time is the
+        total cost of the import.
+
+        >>> trace = '''
+        ... import time: self [us] | cumulative | imported package
+        ... import time:       656 |       2706 | site
+        ... import time:       224 |       6174 | json'''
+        >>> ImportTimeCommand().parse(trace)
+        '6174 usec'
+
+        An interpreter that emits no trace (e.g. PyPy) is reported as
+        unsupported rather than yielding a bogus measurement:
+
+        >>> ImportTimeCommand().parse('')
+        Traceback (most recent call last):
+        ...
+        pytest_perf.runner.ImportTimeUnsupported: ...
+        """
+        cumulative = re.findall(r'import time:\s*\d+\s*\|\s*(\d+)', output)
+        if not cumulative:
+            raise ImportTimeUnsupported(
+                "'-X importtime' produced no trace; "
+                "this interpreter can't measure import latency"
+            )
+        return f'{cumulative[-1]} usec'
 
 
 class Result:
@@ -217,12 +214,12 @@ class BenchmarkRunner:
 
     def _sample(self, cmd: Command, **kwargs: Any) -> str:
         with tempfile.TemporaryDirectory() as empty:
-            # -X importtime writes its trace to stderr, so capture it too.
             out = subprocess.check_output(
                 cmd,
                 cwd=empty,
                 encoding='utf-8',
                 text=True,
+                # -X importtime writes its trace to stderr
                 stderr=subprocess.STDOUT,
                 **kwargs,
             )
