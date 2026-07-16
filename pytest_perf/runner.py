@@ -11,11 +11,64 @@ from typing import Any
 import pip_run
 import tempora
 from jaraco.compat.py38 import r_fix
-from jaraco.functools import signed
+from jaraco.functools import assign_params, signed
 from jaraco.text import strip_ansi
 
 
 class Command(list):
+    """
+    Base for commands that measure an exercise in a subprocess.
+
+    Construct a concrete command with :meth:`create`, which selects the
+    subclass named by ``class_``:
+
+    >>> Command.create('perf').__class__.__name__
+    'Perf'
+    >>> Command.create('import_time').__class__.__name__
+    'ImportTime'
+    """
+
+    #: how to route the subprocess's stderr (see ``subprocess.check_output``)
+    stderr: int | None = None
+
+    @classmethod
+    def create(
+        cls, class_: str, exercise: str = 'pass', warmup: str = 'pass'
+    ) -> Command:
+        (subclass,) = (
+            sub
+            for sub in cls.__subclasses__()
+            if sub.__name__.lower() == class_.replace('_', '')
+        )
+        return assign_params(subclass, dict(exercise=exercise, warmup=warmup))()
+
+    def eval(self, **kwargs: Any) -> str:
+        """
+        Run in an empty working directory and return the measured timing.
+        """
+        with tempfile.TemporaryDirectory() as empty:
+            out = subprocess.check_output(
+                self,
+                cwd=empty,
+                encoding='utf-8',
+                text=True,
+                stderr=self.stderr,
+                **kwargs,
+            )
+        return self.parse(out)
+
+    def parse(self, output: str) -> str:  # pragma: no cover
+        raise NotImplementedError
+
+
+class Perf(Command):
+    """
+    Time an exercise with ``timeit``.
+
+    >>> Perf('dir()')[1:]
+    ['-s', '-m', 'timeit', '--setup', 'pass', '--', 'dir()']
+    """
+
     def __init__(self, exercise: str = 'pass', warmup: str = 'pass') -> None:
         self[:] = [
             sys.executable,
@@ -27,6 +80,93 @@ class Command(list):
             '--',
             exercise,
         ]
+
+    def parse(self, output: str) -> str:
+        """
+        Extract a timing (as a duration string) from ``timeit`` output.
+        """
+        # Python 3.15+ colorizes timeit output when color is enabled (e.g.
+        # FORCE_COLOR); strip escape sequences before parsing. jaraco/pytest-perf#20
+        return re.search(  # type: ignore[union-attr] # output always matches
+            r'([0-9.]+ \w+) per loop', strip_ansi(output)
+        ).group(1)
+
+
+class Unsupported(Exception):
+    """
+    This interpreter can't perform the requested measurement.
+    """
+
+
+class ImportTime(Command):
+    """
+    Trace a cold import with ``-X importtime``.
+
+    ``timeit`` is unsuitable for imports because the module is cached in
+    ``sys.modules`` after the first loop, measuring only the cache hit.
+    jaraco/pytest-perf#12
+
+    >>> ImportTime('import json')[1:]
+    ['-X', 'importtime', '-c', 'import json']
+    """
+
+    class Unsupported(Unsupported):
+        """
+        The interpreter emitted no ``-X importtime`` trace.
+
+        PyPy (and other non-CPython interpreters) accept ``-X importtime``
+        but produce no output, so import latency cannot be measured there.
+        jaraco/pytest-perf#12
+        """
+
+    #: a cold import runs only once per process, so sample several
+    #: processes and report the fastest.
+    samples = 5
+
+    #: -X importtime writes its trace to stderr, so capture it
+    stderr = subprocess.STDOUT
+
+    def __init__(self, exercise: str = 'pass') -> None:
+        self[:] = [sys.executable, '-X', 'importtime', '-c', exercise]
+
+    def eval(self, **kwargs: Any) -> str:
+        samples = (Command.eval(self, **kwargs) for _ in range(self.samples))
+        return min(samples, key=tempora.Duration.parse)
+
+    def parse(self, output: str) -> str:
+        r"""
+        Extract the cumulative import time (microseconds) of the module
+        imported last from a ``-X importtime`` trace.
+
+        Interpreter start-up imports (``site`` and friends) complete
+        before the ``-c`` exercise runs, so the final trace line is the
+        module the exercise requested, and its cumulative time is the
+        total cost of the import.
+
+        >>> trace = '''
+        ... import time: self [us] | cumulative | imported package
+        ... import time:       656 |       2706 | site
+        ... import time:       224 |       6174 | json'''
+        >>> ImportTime().parse(trace)
+        '6174 µsec'
+
+        An interpreter that emits no trace (e.g. PyPy) is reported as
+        unsupported rather than yielding a bogus measurement:
+
+        >>> ImportTime().parse('')
+        Traceback (most recent call last):
+        ...
+        pytest_perf.runner.ImportTime.Unsupported: ...
+        """
+        cumulative = re.findall(r'import time:\s*\d+\s*\|\s*(\d+)', output)
+        if not cumulative:
+            raise self.Unsupported(
+                "'-X importtime' produced no trace; "
+                "this interpreter can't measure import latency"
+            )
+        # µ is the micro sign (U+00B5) that tempora.Duration.parse accepts;
+        # the Greek mu (U+03BC) is rejected. jaraco/pytest-perf#12
+        return f'{cumulative[-1]} µsec'
 
 
 class Result:
@@ -100,7 +240,7 @@ class BenchmarkRunner:
     """
     >>> getfixture('ensure_checkout')
     >>> br = BenchmarkRunner()
-    >>> br.run(Command('import time; time.sleep(0.01)'))
+    >>> br.run(Perf('import time; time.sleep(0.01)'))
     Result('...', '...')
     """
 
@@ -120,21 +260,9 @@ class BenchmarkRunner:
         return pip_run.launch._setup_env(target)
 
     def run(self, cmd: Command) -> Result:
-        experiment = self.eval(cmd, env=self.experiment_env)
-        control = self.eval(cmd, env=self.control_env)
+        experiment = cmd.eval(env=self.experiment_env)
+        control = cmd.eval(env=self.control_env)
         return Result(control, experiment)
-
-    def eval(self, cmd: Command, **kwargs: Any) -> str:
-        with tempfile.TemporaryDirectory() as empty:
-            out = subprocess.check_output(
-                cmd, cwd=empty, encoding='utf-8', text=True, **kwargs
-            )
-        # Python 3.15+ colorizes timeit output when color is enabled (e.g.
-        # FORCE_COLOR); strip escape sequences before parsing. jaraco/pytest-perf#20
-        val = re.search(  # type: ignore[union-attr] # output always matches
-            r'([0-9.]+ \w+) per loop', strip_ansi(out)
-        ).group(1)
-        return val
 
 
 _git_origin = ['git', 'remote', 'get-url', 'origin']

@@ -90,11 +90,13 @@ def load_module(path: Path) -> ModuleType:
     return mod
 
 
+#: match a function to collect; the captured ``kind`` selects the Command subclass
+_exercise = re.compile(r'(\b|_)(?P<kind>import_time|perf)(\b|_)')
+
+
 def funcs_from_name(path: Path) -> Iterator[Any]:
     mod = load_module(path)
-    return (
-        getattr(mod, name) for name in dir(mod) if re.search(r'(\b|_)perf(\b|_)', name)
-    )
+    return (getattr(mod, name) for name in dir(mod) if _exercise.search(name))
 
 
 @pass_none
@@ -115,9 +117,11 @@ def spec_from_func(_func: Any) -> Iterator[tuple[str, Any]]:
     >>> import exercises
     >>> spec = spec_from_func(exercises.simple_perf_test)
     >>> list(spec)
-    ['name', 'warmup', 'exercise']
+    ['name', 'class_', 'warmup', 'exercise']
     >>> spec['name']
     'simple test'
+    >>> spec['class_']
+    'perf'
     >>> spec['warmup']
     '"simple test"\nimport abc\nimport types  '
     >>> spec['exercise']
@@ -128,8 +132,20 @@ def spec_from_func(_func: Any) -> Iterator[tuple[str, Any]]:
     ('path',)
     >>> spec['extras']
     ('testing',)
+
+    A function whose name signals ``import_time`` selects the
+    import-time Command subclass (jaraco/pytest-perf#12); its whole body
+    is the exercise:
+
+    >>> spec = spec_from_func(exercises.import_time_check)
+    >>> spec['class_']
+    'import_time'
+    >>> spec['exercise'].strip()
+    'import pytest_perf  # noqa: F401'
     """
     yield 'name', (first_line(_func.__doc__) or _func.__name__)
+    kind = _exercise.search(_func.__name__)['kind']  # type: ignore[index] # collected names always match
+    yield 'class_', kind
     with contextlib.suppress(AttributeError):
         yield 'extras', freeze(_func.extras)
     with contextlib.suppress(AttributeError):
@@ -151,11 +167,14 @@ class Experiment(pytest.Item):
     def __init__(self, name: str, parent: pytest.Collector, spec: dict[str, Any]):
         super().__init__(name, parent)
         self.spec = spec
-        self.command = assign_params(runner.Command, spec)()
+        self.command = assign_params(runner.Command.create, spec)()
         Experiment._instances.append(self)
 
     def runtest(self) -> None:
-        self.results = self.runner.run(self.command)
+        try:
+            self.results = self.runner.run(self.command)
+        except runner.Unsupported as exc:
+            pytest.skip(str(exc))
 
     @property
     def config_params(self) -> dict[str, Any]:
@@ -178,4 +197,4 @@ class Experiment(pytest.Item):
         return f'{self.name}: {self.results}'
 
     def __bool__(self) -> bool:
-        return hasattr(self, 'results')
+        return self.results is not None
