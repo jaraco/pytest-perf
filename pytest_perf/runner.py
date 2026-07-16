@@ -28,9 +28,6 @@ class Command(list):
     'ImportTime'
     """
 
-    #: number of times to sample; the fastest is reported
-    samples = 1
-
     #: how to route the subprocess's stderr (see ``subprocess.check_output``)
     stderr: int | None = None
 
@@ -44,6 +41,21 @@ class Command(list):
             if sub.__name__.lower() == class_.replace('_', '')
         )
         return assign_params(subclass, dict(exercise=exercise, warmup=warmup))()
+
+    def eval(self, **kwargs: Any) -> str:
+        """
+        Run in an empty working directory and return the measured timing.
+        """
+        with tempfile.TemporaryDirectory() as empty:
+            out = subprocess.check_output(
+                self,
+                cwd=empty,
+                encoding='utf-8',
+                text=True,
+                stderr=self.stderr,
+                **kwargs,
+            )
+        return self.parse(out)
 
     def parse(self, output: str) -> str:  # pragma: no cover
         raise NotImplementedError
@@ -116,6 +128,10 @@ class ImportTime(Command):
 
     def __init__(self, exercise: str = 'pass') -> None:
         self[:] = [sys.executable, '-X', 'importtime', '-c', exercise]
+
+    def eval(self, **kwargs: Any) -> str:
+        samples = (Command.eval(self, **kwargs) for _ in range(self.samples))
+        return min(samples, key=tempora.Duration.parse)
 
     def parse(self, output: str) -> str:
         r"""
@@ -242,25 +258,9 @@ class BenchmarkRunner:
         return pip_run.launch._setup_env(target)
 
     def run(self, cmd: Command) -> Result:
-        experiment = self.eval(cmd, env=self.experiment_env)
-        control = self.eval(cmd, env=self.control_env)
+        experiment = cmd.eval(env=self.experiment_env)
+        control = cmd.eval(env=self.control_env)
         return Result(control, experiment)
-
-    def eval(self, cmd: Command, **kwargs: Any) -> str:
-        samples = (self._sample(cmd, **kwargs) for _ in range(cmd.samples))
-        return min(samples, key=tempora.Duration.parse)
-
-    def _sample(self, cmd: Command, **kwargs: Any) -> str:
-        with tempfile.TemporaryDirectory() as empty:
-            out = subprocess.check_output(
-                cmd,
-                cwd=empty,
-                encoding='utf-8',
-                text=True,
-                stderr=cmd.stderr,
-                **kwargs,
-            )
-        return cmd.parse(out)
 
 
 _git_origin = ['git', 'remote', 'get-url', 'origin']
